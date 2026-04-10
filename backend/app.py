@@ -514,9 +514,16 @@ def get_pharmacy_income():
     
     conn.close()
     return jsonify({"daily": daily, "weekly": weekly, "monthly": monthly})
-
+  
+    
 if __name__ == '__main__':
-    init_db()
-    # Dynamic Port logic for Render
+    # 1. Force the creation of the database and tables
+    print("Database Initialization Started...")
+    init_db() 
+    print("Database Initialization Complete.")
+
+    # 2. Get the port from Render
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, port=port, host='0.0.0.0')
+    
+    # 3. Run the app
+    app.run(debug=False, port=port, host='0.0.0.0')    
