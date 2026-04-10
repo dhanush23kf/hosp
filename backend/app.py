@@ -512,6 +512,12 @@ def get_pharmacy_income():
     conn.close()
     return jsonify({"daily": daily, "weekly": weekly, "monthly": monthly})
 
+
+@app.route("/")
+def home():
+    return "HMS Backend Running 🚀"
+
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=False, port=5000, host='0.0.0.0')
