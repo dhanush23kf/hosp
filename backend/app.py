@@ -11,8 +11,13 @@ from datetime import datetime, timedelta
 # --- ENTERPRISE CONFIGURATION ---
 
 app = Flask(__name__)
-# Enable CORS with strict security headers for Hospital Data Privacy
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Updated CORS to allow your Render domain and handle cross-origin requests properly
+CORS(app, resources={r"/api/*": {
+    "origins": ["https://hosp-l3oy.onrender.com", "http://localhost:3000", "http://localhost:5173"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
 
 # Global Security & Headers Middleware
 @app.after_request
@@ -26,7 +31,8 @@ def add_cors_headers(response):
     response.headers.add('X-Frame-Options', 'DENY')
     return response
 
-DB_PATH = "hospital.db"
+# Dynamic database path for Render persistence
+DB_PATH = os.environ.get('DATABASE_URL', 'hospital.db')
 LOG_FILE = "hospital_system.log"
 
 # --- CORE LOGGING INFRASTRUCTURE ---
@@ -176,12 +182,10 @@ def init_db():
 
     # --- SEEDING ENTERPRISE DATA ---
     
-    # Administrative Accounts
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("reception", "admin", "Reception")')
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("pharmacy", "admin", "Pharmacy")')
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("admin", "root", "Administrator")')
     
-    # Professional Specialists
     doctors = [
         ("dr1", "admin", "Doctor", "Dr. TEJA", "Cardiology", 850),
         ("dr2", "admin", "Doctor", "Dr. DHANUSH", "Neurology", 1200),
@@ -196,7 +200,6 @@ def init_db():
             u_id = u_row[0]
             cursor.execute('INSERT OR IGNORE INTO doctors (user_id, name, specialization, consultation_fee) VALUES (?, ?, ?, ?)', (u_id, name, spec, fee))
 
-    # Bed Assets & Pricing
     beds = [
         ('B-101', 'General Ward A', 'Standard', 350),
         ('B-102', 'General Ward A', 'Standard', 350),
@@ -216,6 +219,12 @@ def init_db():
     conn.commit()
     conn.close()
     log_system_event("SYSTEM", "INIT", "Clinical Engine V4.0 successfully deployed.")
+
+# --- HOME ROUTE ---
+
+@app.route("/")
+def home():
+    return "HMS Backend Running 🚀"
 
 # --- AUTHENTICATION & SESSION MANAGEMENT ---
 
@@ -289,7 +298,7 @@ def update_appointment_status(apt_id):
     conn.close()
     return jsonify({"status": "success"})
 
-# --- WARD CONTROL & ADMISSION ENGINE (CRITICAL UPDATES) ---
+# --- WARD CONTROL & ADMISSION ENGINE ---
 
 @app.route('/api/beds', methods=['GET'])
 def get_beds():
@@ -331,7 +340,6 @@ def admit_patient():
     data = request.json
     conn = get_db()
     try:
-        # VALIDATE NO DOUBLE ADMISSION
         existing = conn.execute('SELECT id FROM admissions WHERE token_number = ? AND discharge_date IS NULL', (data['token_number'],)).fetchone()
         if existing:
             return jsonify({"status": "error", "message": "PATIENT ALREADY ADMITTED TO A WARD."}), 400
@@ -417,7 +425,6 @@ def pharmacy_inventory():
     conn = get_db()
     if request.method == 'POST':
         data = request.json
-        # Handle Add or Update
         if data.get('id'):
             conn.execute('''
                 UPDATE pharmacy_inventory SET medicine_name=?, expiry_date=?, stock_quantity=?, unit_price=? WHERE id=?
@@ -443,10 +450,9 @@ def delete_medicine(med_id):
     conn.close()
     return jsonify({"status": "success"})
 
-# --- PHARMACY SALE WITH AUTO STOCK DEDUCTION ---
 @app.route('/api/pharmacy/sell', methods=['POST'])
 def sell_medicine():
-    data = request.json # Expects items: [{id: 1, qty: 5, name: 'X'}]
+    data = request.json 
     conn = get_db()
     now = datetime.now().isoformat()
     try:
@@ -454,21 +460,17 @@ def sell_medicine():
         med_summary = ""
         
         for item in data['items']:
-            # 1. Fetch current stock and price
             res = conn.execute('SELECT stock_quantity, unit_price, medicine_name FROM pharmacy_inventory WHERE id = ?', (item['id'],)).fetchone()
             
             if not res or res['stock_quantity'] < int(item['qty']):
-                return jsonify({"status": "error", "message": f"Insufficient stock for {item['name'] or 'Medicine ID '+str(item['id'])}"}), 400
+                return jsonify({"status": "error", "message": f"Insufficient stock for {item['name'] or 'ID '+str(item['id'])}"}), 400
             
-            # 2. Update (Deduct) Stock
             new_qty = res['stock_quantity'] - int(item['qty'])
             conn.execute('UPDATE pharmacy_inventory SET stock_quantity = ? WHERE id = ?', (new_qty, item['id']))
             
-            # 3. Add to bill and summary
             total_bill += (res['unit_price'] * int(item['qty']))
             med_summary += f"{res['medicine_name']} (x{item['qty']}), "
 
-        # 4. Save Final Sale Record
         conn.execute('''
             INSERT INTO pharmacy_sales (patient_name, patient_age, patient_phone, problem, medicines_list, total_bill, sale_date)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -486,16 +488,10 @@ def sell_medicine():
 def get_pharmacy_history():
     conn = get_db()
     sales = conn.execute('SELECT * FROM pharmacy_sales ORDER BY id DESC').fetchall()
-    
-    # Calculate daily income
     today = datetime.now().strftime('%Y-%m-%d')
     daily = conn.execute('SELECT SUM(total_bill) FROM pharmacy_sales WHERE sale_date LIKE ?', (f'{today}%',)).fetchone()[0] or 0
-    
     conn.close()
-    return jsonify({
-        "sales": [dict(s) for s in sales],
-        "daily": daily
-    })
+    return jsonify({"sales": [dict(s) for s in sales], "daily": daily})
 
 @app.route('/api/pharmacy/income', methods=['GET'])
 def get_pharmacy_income():
@@ -512,12 +508,8 @@ def get_pharmacy_income():
     conn.close()
     return jsonify({"daily": daily, "weekly": weekly, "monthly": monthly})
 
-
-@app.route("/")
-def home():
-    return "HMS Backend Running 🚀"
-
-
 if __name__ == '__main__':
     init_db()
-    app.run(debug=False, port=5000, host='0.0.0.0')
+    # Handle dynamic port assignment for Render
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, port=port, host='0.0.0.0')
