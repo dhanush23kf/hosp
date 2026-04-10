@@ -664,20 +664,26 @@
          */
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
-            const res = await fetch(`${API_BASE}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: document.getElementById('username').value,
-                    password: document.getElementById('password').value
-                })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                currentUser = data;
-                sessionStorage.setItem('hospitalUser', JSON.stringify(currentUser));
-                location.reload();
-            } else alert("INSTITUTIONAL ACCESS DENIED.");
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentUser = data;
+                    sessionStorage.setItem('hospitalUser', JSON.stringify(currentUser));
+                    location.reload();
+                } else {
+                    alert("INSTITUTIONAL ACCESS DENIED: Invalid Credentials.");
+                }
+            } catch (err) {
+                alert("SERVER CONNECTION ERROR: Ensure backend is live.");
+            }
         };
 
         function logoutApp() {
@@ -748,14 +754,22 @@
                 'pharma-archive': ['Dispensing Archive', 'Historical records of pharmacy sales and patient logs.'],
                 'history': ['Master Archives', 'Institutional archival system for clinical and fiscal records.']
             };
+            
             document.getElementById('view-title').innerText = meta[page][0];
             document.getElementById('view-desc').innerText = meta[page][1];
 
             const actions = document.getElementById('header-actions');
             actions.innerHTML = '';
+            
             if (currentUser.role === 'Reception') {
                 if (page === 'appointments') actions.innerHTML = `<button onclick="openModal('modal-appointment')" class="bg-black text-white px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Entry</button>`;
                 if (page === 'beds') actions.innerHTML = `<button onclick="openModal('modal-admit')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">admission</button>`;
+            }
+            if (currentUser.role === 'Pharmacy' && page === 'pharma-terminal') {
+                actions.innerHTML = `
+                    <button onclick="openModal('modal-medicine')" class="bg-slate-800 text-white px-6 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl mr-2">Update Stock</button>
+                    <button onclick="openModal('modal-pharma-sell')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Sale</button>
+                `;
             }
 
             if (page === 'history') {
@@ -770,6 +784,7 @@
                 }
             }
 
+            // Route Data Fetching
             if (page === 'appointments') loadAppointments();
             if (page === 'history') loadHistory();
             if (page === 'beds') loadBeds();
@@ -836,7 +851,6 @@
                 if (currentUser.role === 'Reception') {
                     document.getElementById('count-total').innerText = data.length;
                     document.getElementById('count-revenue').innerText = '₹' + data.reduce((s, h) => s + (h.total_bill || 0), 0).toLocaleString();
-                    document.getElementById('count-stay').innerText = '4.2 Days'; 
                 }
 
                 document.getElementById('history-rows').innerHTML = data.map(h => {
@@ -860,7 +874,6 @@
          */
         async function loadPharmacy() {
             try {
-                // Fetch inventory for dropdowns and table
                 const iRes = await fetch(`${API_BASE}/pharmacy/inventory`);
                 inventoryData = await iRes.json();
                 
@@ -873,7 +886,6 @@
                         <td><button onclick="deleteMed(${i.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
                     </tr>`).join('');
                 
-                // Fetch Archive
                 const hRes = await fetch(`${API_BASE}/pharmacy/history`);
                 const hData = await hRes.json();
                 document.getElementById('pharma-sales-rows').innerHTML = hData.sales.map(s => `
@@ -888,9 +900,8 @@
                 if(document.getElementById('pharma-daily')) {
                     document.getElementById('pharma-daily').innerText = `₹${hData.daily.toLocaleString()}`;
                     document.getElementById('pharma-count').innerText = hData.sales.length;
-                    document.getElementById('pharma-monthly').innerText = `₹${(hData.daily * 3.4).toLocaleString()}`; // Sum logic for month
                 }
-            } catch (e) { console.error("Link failed:", e); }
+            } catch (e) { console.error("Pharmacy Sync failed:", e); }
         }
 
         /**
@@ -903,19 +914,19 @@
             row.className = 'med-selection-row p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in';
             row.id = `row-${rowId}`;
             
-            const options = inventoryData.map(i => `<option value="${i.id}" data-price="${i.unit_price}">${i.medicine_name} (₹${i.unit_price} | Stock: ${i.stock_quantity})</option>`).join('');
+            const options = inventoryData.map(i => `<option value="${i.id}" data-price="${i.unit_price}">${i.medicine_name} (₹${i.unit_price})</option>`).join('');
             
             row.innerHTML = `
                 <div>
-                    <label class="form-label">Select Tablet</label>
+                    <label class="form-label">Select Medicine</label>
                     <select onchange="updateTotal()" class="med-select form-input bg-white">${options}</select>
                 </div>
                 <div>
                     <label class="form-label">Quantity</label>
-                    <input type="number" onchange="updateTotal()" value="1" min="1" class="med-qty form-input bg-white" placeholder="Qty">
+                    <input type="number" onchange="updateTotal()" value="1" min="1" class="med-qty form-input bg-white">
                 </div>
                 <div class="flex items-end pb-1">
-                    <button type="button" onclick="removeMedRow(${rowId})" class="w-full py-4 bg-red-50 text-red-500 rounded-xl font-bold uppercase text-[9px] tracking-widest"><i class="fa-solid fa-trash mr-1"></i> Remove</button>
+                    <button type="button" onclick="removeMedRow(${rowId})" class="w-full py-4 bg-red-50 text-red-500 rounded-xl font-bold uppercase text-[9px] tracking-widest">Remove</button>
                 </div>
             `;
             container.appendChild(row);
@@ -944,39 +955,32 @@
                 items.push({ id: select.value, qty: row.querySelector('.med-qty').value, name: select.options[select.selectedIndex].text });
             });
 
-            const p = { 
+            const payload = { 
                 patient_name: document.getElementById('ps-name').value, 
                 phone: document.getElementById('ps-phone').value, 
                 age: document.getElementById('ps-age').value, 
                 problem: document.getElementById('ps-problem').value, 
-                items: items,
-                total_bill: document.getElementById('ps-total-val').value 
+                items: items 
             };
             
             const res = await fetch(`${API_BASE}/pharmacy/sell`, { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(p) 
+                body: JSON.stringify(payload) 
             });
-            const result = await res.json();
+            
             if(res.ok) { 
-                alert("TRANSACTION FINALIZED: Stock updated successfully."); 
+                alert("TRANSACTION FINALIZED: Inventory adjusted."); 
                 closeModal('modal-pharma-sell'); 
                 loadPharmacy(); 
-            } else alert("Error: " + result.message);
-        };
-
-        async function deleteMed(id) { if(confirm("Discard inventory record?")) { await fetch(`${API_BASE}/pharmacy/inventory/${id}`, { method: 'DELETE' }); loadPharmacy(); } }
-
-        document.getElementById('medicineForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const p = { medicine_name: document.getElementById('med-name').value, expiry_date: document.getElementById('med-expiry').value, stock_quantity: document.getElementById('med-qty').value, unit_price: document.getElementById('med-price').value };
-            await fetch(`${API_BASE}/pharmacy/inventory`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) });
-            closeModal('modal-medicine'); loadPharmacy();
+            } else {
+                const err = await res.json();
+                alert("SALE FAILED: " + err.message);
+            }
         };
 
         /**
-         * SYSTEM INFRASTRUCTURE
+         * WARD & BEDS MANAGEMENT
          */
         async function loadBeds() {
             const grid = document.getElementById('beds-grid');
@@ -1007,10 +1011,10 @@
         }
 
         async function processCheckout(id) {
-            if(!confirm("Authorize Institutional Discharge protocol?")) return;
+            if(!confirm("Authorize Institutional Discharge?")) return;
             const res = await fetch(`${API_BASE}/discharge/${id}`, { method: 'POST' });
             const d = await res.json();
-            alert(`SEQUENCE COMPLETE. Institutional Invoice: ₹${d.bill.toLocaleString()}`);
+            alert(`SEQUENCE COMPLETE. Bill: ₹${d.bill.toLocaleString()}`);
             closeModal('modal-patient-detail'); loadBeds(); loadHistory();
         }
 
@@ -1026,7 +1030,8 @@
         }
 
         async function validateTokenForAdmission() {
-            const res = await fetch(`${API_BASE}/validate_token/${document.getElementById('bb-token-input').value}`);
+            const token = document.getElementById('bb-token-input').value;
+            const res = await fetch(`${API_BASE}/validate_token/${token}`);
             const r = await res.json();
             if (r.status === 'success') {
                 activeValidatedPatient = r.data;
@@ -1035,23 +1040,73 @@
                 document.getElementById('bb-patient-name').value = r.data.patient_name;
                 document.getElementById('bb-patient-phone').value = r.data.patient_phone;
                 document.getElementById('bb-doctor-select').value = r.data.doctor_id;
-            } else alert("REF REJECTED");
+            } else {
+                alert("TOKEN INVALID OR EXPIRED");
+            }
         }
 
         document.getElementById('admitForm').onsubmit = async (e) => {
             e.preventDefault();
-            if(!activeValidatedPatient) return alert("Verify Clinical ID Token first.");
-            const p = { token_number: activeValidatedPatient.token_number, patient_name: activeValidatedPatient.patient_name, phone: activeValidatedPatient.patient_phone, doctor_id: document.getElementById('bb-doctor-select').value, age: document.getElementById('bb-age').value, problem: document.getElementById('bb-problem').value, bed_id: document.getElementById('bb-bed-select').value, date: new Date().toISOString() };
+            if(!activeValidatedPatient) return alert("Please validate Clinical Token first.");
+            const p = { 
+                token_number: activeValidatedPatient.token_number, 
+                patient_name: activeValidatedPatient.patient_name, 
+                phone: activeValidatedPatient.patient_phone, 
+                doctor_id: document.getElementById('bb-doctor-select').value, 
+                age: document.getElementById('bb-age').value, 
+                problem: document.getElementById('bb-problem').value, 
+                bed_id: document.getElementById('bb-bed-select').value, 
+                date: new Date().toISOString() 
+            };
             const res = await fetch(`${API_BASE}/admit`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(p) });
-            if(res.ok) { alert("INPATIENT ADMISSION FINALIZED."); closeModal('modal-admit'); loadBeds(); loadHistory(); }
+            if(res.ok) { alert("INPATIENT ADMITTED."); closeModal('modal-admit'); loadBeds(); loadHistory(); }
         };
 
         document.getElementById('appointmentForm').onsubmit = async (e) => {
             e.preventDefault();
-            const p = { patient_name: document.getElementById('ap-pat-name').value, patient_phone: document.getElementById('ap-pat-phone').value, doctor_id: document.getElementById('ap-doctor-select').value, date: document.getElementById('ap-time').value };
-            const res = await fetch(`${API_BASE}/appointments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
-            const d = await res.json(); alert("TOKEN AUTHORIZED: " + d.token); closeModal('modal-appointment'); loadAppointments();
+            const p = { 
+                patient_name: document.getElementById('ap-pat-name').value, 
+                patient_phone: document.getElementById('ap-pat-phone').value, 
+                doctor_id: document.getElementById('ap-doctor-select').value, 
+                date: document.getElementById('ap-time').value 
+            };
+            const res = await fetch(`${API_BASE}/appointments`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(p) 
+            });
+            const d = await res.json(); 
+            alert("APPOINTMENT REGISTERED. Token: " + d.token); 
+            closeModal('modal-appointment'); 
+            loadAppointments();
         };
+
+        /**
+         * PHARMACY INVENTORY UPDATE
+         */
+        document.getElementById('medicineForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const p = { 
+                medicine_name: document.getElementById('med-name').value, 
+                expiry_date: document.getElementById('med-expiry').value, 
+                stock_quantity: document.getElementById('med-qty').value, 
+                unit_price: document.getElementById('med-price').value 
+            };
+            await fetch(`${API_BASE}/pharmacy/inventory`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(p) 
+            });
+            closeModal('modal-medicine'); 
+            loadPharmacy();
+        };
+
+        async function deleteMed(id) { 
+            if(confirm("Discard inventory record?")) { 
+                await fetch(`${API_BASE}/pharmacy/inventory/${id}`, { method: 'DELETE' }); 
+                loadPharmacy(); 
+            } 
+        }
 
         /**
          * GLOBAL UTILS
@@ -1079,5 +1134,3 @@
 
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     </script>
-</body>
-</html>
