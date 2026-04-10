@@ -13,11 +13,7 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 
 # Updated CORS to allow your Render domain and handle cross-origin requests properly
-CORS(app, resources={r"/api/*": {
-    "origins": ["https://hosp-l3oy.onrender.com", "http://localhost:3000", "http://localhost:5173"],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    "allow_headers": ["Content-Type", "Authorization"]
-}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Global Security & Headers Middleware
 @app.after_request
