@@ -29,9 +29,10 @@ def add_cors_headers(response):
     response.headers.add('X-Frame-Options', 'DENY')
     return response
 
-# Standard Database Path
-DB_PATH = "hospital.db"
-LOG_FILE = "hospital_system.log"
+# Standard Database Path with Absolute Path Logic for Render
+basedir = os.path.abspath(os.path.dirname(__file__))
+DB_PATH = os.path.join(basedir, "hospital.db")
+LOG_FILE = os.path.join(basedir, "hospital_system.log")
 
 # --- CORE LOGGING INFRASTRUCTURE ---
 
@@ -514,16 +515,17 @@ def get_pharmacy_income():
     
     conn.close()
     return jsonify({"daily": daily, "weekly": weekly, "monthly": monthly})
-  
+    
     
 if __name__ == '__main__':
-    # 1. Force the creation of the database and tables
-    print("Database Initialization Started...")
-    init_db() 
-    print("Database Initialization Complete.")
+    # 1. Force the creation of the database and tables using context manager
+    with app.app_context():
+        print("Database Initialization Started...")
+        init_db() 
+        print("Database Initialization Complete.")
 
     # 2. Get the port from Render
     port = int(os.environ.get("PORT", 5000))
     
-    # 3. Run the app
-    app.run(debug=False, port=port, host='0.0.0.0')    
+    # 3. Run the app (debug=False is mandatory for production)
+    app.run(debug=False, port=port, host='0.0.0.0')
