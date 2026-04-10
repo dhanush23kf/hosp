@@ -642,501 +642,452 @@
         </div>
     </div>
 
-    <script>
-        const API_BASE = "https://hosp-l3oy.onrender.com/api";
-        let currentUser = JSON.parse(sessionStorage.getItem('hospitalUser')) || null;
-        let activeValidatedPatient = null;
-        let inventoryData = [];
+<script>
+    /* -------------------------------------------------------------------------
+     * DHANUSH HMS - FULL SYSTEM LOGIC v4.6 (RENDER INTEGRATED)
+     * ------------------------------------------------------------------------- */
+    
+    const API_BASE = "https://hosp-l3oy.onrender.com/api";
+    let currentUser = JSON.parse(sessionStorage.getItem('hospitalUser')) || null;
+    let activeValidatedPatient = null;
+    let inventoryData = [];
 
-        /**
-         * STARTUP SEQUENCE
-         */
-        window.onload = () => {
-            if (currentUser) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                initDashboard();
-            }
-        };
+    /**
+     * STARTUP SEQUENCE
+     */
+    window.onload = () => {
+        if (currentUser) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            initDashboard();
+        }
+    };
 
-        /**
-         * AUTH ENGINE
-         */
-        document.getElementById('loginForm').onsubmit = async (e) => {
-            e.preventDefault();
-            try {
-                const res = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: document.getElementById('username').value,
-                        password: document.getElementById('password').value
-                    })
-                });
-             let data;
-try {
-    data = await res.json();
-} catch {
-    alert("Server error");
-    return;
-}
+    /**
+     * AUTH ENGINE
+     */
+    document.getElementById('loginForm').onsubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${API_BASE}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
                 if (data.status === 'success') {
                     currentUser = data;
                     sessionStorage.setItem('hospitalUser', JSON.stringify(currentUser));
                     location.reload();
-                } else {
-                    alert("INSTITUTIONAL ACCESS DENIED: Invalid Credentials.");
-                }
-            } catch (err) {
-                alert("SERVER CONNECTION ERROR: Ensure backend is live.");
+                } else alert("INSTITUTIONAL ACCESS DENIED: " + (data.message || "Invalid Key"));
+            } else {
+                alert("SERVER ERROR: Backend is waking up or crashing. Check Render Logs.");
             }
-        };
+        } catch (err) {
+            alert("CONNECTION ERROR: Cannot reach " + API_BASE);
+        }
+    };
 
-        function logoutApp() {
-            sessionStorage.removeItem('hospitalUser');
-            location.reload();
+    function logoutApp() {
+        sessionStorage.removeItem('hospitalUser');
+        location.reload();
+    }
+
+    /**
+     * UI INITIALIZATION & ROLE ROUTING
+     */
+    function initDashboard() {
+        document.getElementById('display-name').innerText = currentUser.username;
+        document.getElementById('display-role').innerText = currentUser.role;
+        document.getElementById('user-avatar').innerText = currentUser.username[0];
+        
+        if (currentUser.role === 'Doctor') {
+            document.body.classList.add('doctor-view');
+        }
+        
+        renderSidebar();
+        
+        if (currentUser.role === 'Pharmacy') switchPage('pharma-terminal');
+        else switchPage('appointments');
+    }
+
+    function renderSidebar() {
+        const nav = document.getElementById('nav-links');
+        let links = '';
+        
+        if (currentUser.role === 'Reception') {
+            links += createNavItem('appointments', 'fa-calendar-check', 'Session Hub');
+            links += createNavItem('beds', 'fa-bed-pulse', 'Ward Assets');
+            links += createNavItem('doctors', 'fa-user-md', 'Lead Roster');
+            links += createNavItem('history', 'fa-box-archive', 'Master Logs');
+        } 
+        else if (currentUser.role === 'Doctor') {
+            links += createNavItem('appointments', 'fa-stethoscope', 'Live Schedule');
+            links += createNavItem('history', 'fa-notes-medical', 'Clinical Tracking');
+        } 
+        else if (currentUser.role === 'Pharmacy') {
+            links += createNavItem('pharma-terminal', 'fa-cash-register', 'Dispense & Stock');
+            links += createNavItem('pharma-archive', 'fa-clock-rotate-left', 'Dispensary Log');
+        }
+        
+        nav.innerHTML = links;
+    }
+
+    function createNavItem(key, icon, label) {
+        return `<button onclick="switchPage('${key}')" id="nav-${key}" class="nav-item w-full"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`;
+    }
+
+    /**
+     * PAGE TRANSITION ENGINE
+     */
+    async function switchPage(page) {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        const target = document.getElementById(`sec-${page}`);
+        if(target) target.classList.remove('hidden');
+        if(document.getElementById(`nav-${page}`)) document.getElementById(`nav-${page}`).classList.add('active');
+
+        const meta = {
+            'appointments': ['Clinical Schedule', 'Managing real-time patient consultation sessions.'],
+            'beds': ['Ward Inventory', 'Live vacancy tracking and inpatient resource monitoring.'],
+            'doctors': ['Professional Staff', 'Active Specialists and Clinical Resource Directory.'],
+            'pharma-terminal': ['Pharmacy Terminal', 'Institutional Drug Inventory & Patient POS Entry.'],
+            'pharma-archive': ['Dispensing Archive', 'Historical records of pharmacy sales and patient logs.'],
+            'history': ['Master Archives', 'Institutional archival system for clinical and fiscal records.']
+        };
+        document.getElementById('view-title').innerText = meta[page][0];
+        document.getElementById('view-desc').innerText = meta[page][1];
+
+        const actions = document.getElementById('header-actions');
+        actions.innerHTML = '';
+        if (currentUser.role === 'Reception') {
+            if (page === 'appointments') actions.innerHTML = `<button onclick="openModal('modal-appointment')" class="bg-black text-white px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Entry</button>`;
+            if (page === 'beds') actions.innerHTML = `<button onclick="openModal('modal-admit')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">admission</button>`;
         }
 
-        /**
-         * UI INITIALIZATION & ROLE ROUTING
-         */
-        function initDashboard() {
-            document.getElementById('display-name').innerText = currentUser.username;
-            document.getElementById('display-role').innerText = currentUser.role;
-            document.getElementById('user-avatar').innerText = currentUser.username[0];
-            
+        if (page === 'history') {
+            const finCols = document.querySelectorAll('.finance-col');
+            const finStats = document.querySelectorAll('.finance-stat');
             if (currentUser.role === 'Doctor') {
-                document.body.classList.add('doctor-view');
-            }
-            
-            renderSidebar();
-            
-            if (currentUser.role === 'Pharmacy') switchPage('pharma-terminal');
-            else switchPage('appointments');
-        }
-
-        function renderSidebar() {
-            const nav = document.getElementById('nav-links');
-            let links = '';
-            
-            if (currentUser.role === 'Reception') {
-                links += createNavItem('appointments', 'fa-calendar-check', 'Session Hub');
-                links += createNavItem('beds', 'fa-bed-pulse', 'Ward Assets');
-                links += createNavItem('doctors', 'fa-user-md', 'Lead Roster');
-                links += createNavItem('history', 'fa-box-archive', 'Master Logs');
-            } 
-            else if (currentUser.role === 'Doctor') {
-                links += createNavItem('appointments', 'fa-stethoscope', 'Live Schedule');
-                links += createNavItem('history', 'fa-notes-medical', 'Clinical Tracking');
-            } 
-            else if (currentUser.role === 'Pharmacy') {
-                links += createNavItem('pharma-terminal', 'fa-cash-register', 'Dispense & Stock');
-                links += createNavItem('pharma-archive', 'fa-clock-rotate-left', 'Dispensary Log');
-            }
-            
-            nav.innerHTML = links;
-        }
-
-        function createNavItem(key, icon, label) {
-            return `<button onclick="switchPage('${key}')" id="nav-${key}" class="nav-item w-full"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`;
-        }
-
-        /**
-         * PAGE TRANSITION ENGINE
-         */
-        async function switchPage(page) {
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            const target = document.getElementById(`sec-${page}`);
-            if(target) target.classList.remove('hidden');
-            if(document.getElementById(`nav-${page}`)) document.getElementById(`nav-${page}`).classList.add('active');
-
-            const meta = {
-                'appointments': ['Clinical Schedule', 'Managing real-time patient consultation sessions.'],
-                'beds': ['Ward Inventory', 'Live vacancy tracking and inpatient resource monitoring.'],
-                'doctors': ['Professional Staff', 'Active Specialists and Clinical Resource Directory.'],
-                'pharma-terminal': ['Pharmacy Terminal', 'Institutional Drug Inventory & Patient POS Entry.'],
-                'pharma-archive': ['Dispensing Archive', 'Historical records of pharmacy sales and patient logs.'],
-                'history': ['Master Archives', 'Institutional archival system for clinical and fiscal records.']
-            };
-            
-            document.getElementById('view-title').innerText = meta[page][0];
-            document.getElementById('view-desc').innerText = meta[page][1];
-
-            const actions = document.getElementById('header-actions');
-            actions.innerHTML = '';
-            
-            if (currentUser.role === 'Reception') {
-                if (page === 'appointments') actions.innerHTML = `<button onclick="openModal('modal-appointment')" class="bg-black text-white px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Entry</button>`;
-                if (page === 'beds') actions.innerHTML = `<button onclick="openModal('modal-admit')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">admission</button>`;
-            }
-            if (currentUser.role === 'Pharmacy' && page === 'pharma-terminal') {
-                actions.innerHTML = `
-                    <button onclick="openModal('modal-medicine')" class="bg-slate-800 text-white px-6 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl mr-2">Update Stock</button>
-                    <button onclick="openModal('modal-pharma-sell')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Sale</button>
-                `;
-            }
-
-            if (page === 'history') {
-                const finCols = document.querySelectorAll('.finance-col');
-                const finStats = document.querySelectorAll('.finance-stat');
-                if (currentUser.role === 'Doctor') {
-                    finCols.forEach(c => c.style.display = 'none');
-                    finStats.forEach(s => s.style.display = 'none');
-                } else {
-                    finCols.forEach(c => c.style.display = 'table-cell');
-                    finStats.forEach(s => s.style.display = 'flex');
-                }
-            }
-
-            // Route Data Fetching
-            if (page === 'appointments') loadAppointments();
-            if (page === 'history') loadHistory();
-            if (page === 'beds') loadBeds();
-            if (page === 'doctors') loadDoctors();
-            if (page === 'pharma-terminal' || page === 'pharma-archive') loadPharmacy();
-        }
-
-        /**
-         * DOCTOR CLINICAL WORKFLOW
-         */
-        async function setWorkflow(id, status) {
-            await fetch(`${API_BASE}/appointments/${id}/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            loadAppointments();
-            if (status === 'Completed') loadHistory();
-        }
-
-        /**
-         * DATA LOADERS
-         */
-        async function loadAppointments() {
-            const table = document.getElementById('appointment-rows');
-            table.innerHTML = '';
-            document.getElementById('app-loading').classList.remove('hidden');
-            
-            try {
-                let url = `${API_BASE}/appointments`;
-                if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                document.getElementById('app-loading').classList.add('hidden');
-                
-                table.innerHTML = data.map(a => {
-                    let workflow = '';
-                    if (currentUser.role === 'Doctor' && currentUser.doctor_id == a.doctor_id) {
-                        if (a.status === 'Scheduled') workflow = `<button onclick="setWorkflow(${a.id}, 'Accepted')" class="ml-4 bg-emerald-500 text-white px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Accept</button>`;
-                        else if (a.status === 'Accepted') workflow = `<button onclick="setWorkflow(${a.id}, 'Completed')" class="ml-4 bg-[#d4af37] text-black px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Complete</button>`;
-                    }
-                    return `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="text-center font-bold text-sky-600 text-xs">${a.token_number}</td>
-                        <td class="font-bold uppercase text-xs text-slate-800">${a.patient_name}</td>
-                        <td class="font-medium text-slate-500 text-xs">${a.doctor_name}</td>
-                        <td class="text-[10px] font-bold text-slate-400 italic">${a.appointment_date}</td>
-                        <td>
-                            <span class="status-pill ${a.status==='Completed'?'bg-amber-50 text-amber-600':'bg-sky-50 text-sky-600'}">${a.status}</span>
-                            ${workflow}
-                        </td>
-                    </tr>`;
-                }).join('') || `<tr><td colspan="5" class="p-20 text-center uppercase font-bold text-slate-200">Empty Sessions</td></tr>`;
-            } catch (e) { console.error(e); }
-        }
-
-        async function loadHistory() {
-            try {
-                let url = `${API_BASE}/history`;
-                if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                if (currentUser.role === 'Reception') {
-                    document.getElementById('count-total').innerText = data.length;
-                    document.getElementById('count-revenue').innerText = '₹' + data.reduce((s, h) => s + (h.total_bill || 0), 0).toLocaleString();
-                }
-
-                document.getElementById('history-rows').innerHTML = data.map(h => {
-                    const stay = currentUser.role === 'Reception' ? `<td class="finance-col font-bold text-slate-600">${h.days_stayed || '0'} Days</td>` : '';
-                    const bill = currentUser.role === 'Reception' ? `<td class="finance-col text-right font-bold text-amber-600">₹${(h.total_bill || 0).toLocaleString()}</td>` : '';
-                    return `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td><p class="font-bold text-xs uppercase text-slate-800">${h.patient_name}</p><p class="text-[9px] text-slate-400">${h.patient_phone}</p></td>
-                        <td><p class="text-sm font-bold text-slate-600">${h.doctor_name}</p><p class="text-[10px] text-slate-400 italic">"${h.problem}"</p></td>
-                        <td><span class="text-[10px] font-bold text-slate-400 uppercase">${h.bed_number ? 'Bed ' + h.bed_number : 'OPD SESSION'}</span></td>
-                        ${stay}
-                        <td class="text-[10px] text-slate-400 font-medium">Log: ${h.admit_date?.split('T')[0]}</td>
-                        ${bill}
-                    </tr>`;
-                }).join('');
-            } catch (e) { console.error(e); }
-        }
-
-        /**
-         * PHARMACY HUB ENGINE
-         */
-        async function loadPharmacy() {
-            try {
-                const iRes = await fetch(`${API_BASE}/pharmacy/inventory`);
-                inventoryData = await iRes.json();
-                
-                document.getElementById('pharma-inventory-rows').innerHTML = inventoryData.map(i => `
-                    <tr class="hover:bg-slate-50">
-                        <td class="font-bold text-slate-800 text-xs uppercase">${i.medicine_name}</td>
-                        <td class="text-red-500 font-bold text-[10px] uppercase">${i.expiry_date}</td>
-                        <td class="font-bold text-xs">${i.stock_quantity} Units</td>
-                        <td class="text-emerald-600 font-bold text-xs">₹${i.unit_price}</td>
-                        <td><button onclick="deleteMed(${i.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
-                    </tr>`).join('');
-                
-                const hRes = await fetch(`${API_BASE}/pharmacy/history`);
-                const hData = await hRes.json();
-                document.getElementById('pharma-sales-rows').innerHTML = hData.sales.map(s => `
-                    <tr class="hover:bg-slate-50">
-                        <td><p class="font-bold uppercase text-[11px] text-slate-800">${s.patient_name}</p></td>
-                        <td class="text-[10px] text-slate-400 font-bold uppercase">${s.patient_age}Y • ${s.patient_phone}</td>
-                        <td class="text-[10px] text-slate-500 italic">"${s.problem}"</td>
-                        <td class="text-[10px] text-slate-500 font-medium truncate max-w-[200px]">${s.medicines_list}</td>
-                        <td class="font-bold text-emerald-600 text-xs text-right">₹${s.total_bill.toLocaleString()}</td>
-                    </tr>`).join('');
-                
-                if(document.getElementById('pharma-daily')) {
-                    document.getElementById('pharma-daily').innerText = `₹${hData.daily.toLocaleString()}`;
-                    document.getElementById('pharma-count').innerText = hData.sales.length;
-                }
-            } catch (e) { console.error("Pharmacy Sync failed:", e); }
-        }
-
-        /**
-         * PHARMACY POS DYNAMIC LOGIC
-         */
-        function addMedRow() {
-            const container = document.getElementById('sale-items-container');
-            const rowId = Date.now();
-            const row = document.createElement('div');
-            row.className = 'med-selection-row p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in';
-            row.id = `row-${rowId}`;
-            
-            const options = inventoryData.map(i => `<option value="${i.id}" data-price="${i.unit_price}">${i.medicine_name} (₹${i.unit_price})</option>`).join('');
-            
-            row.innerHTML = `
-                <div>
-                    <label class="form-label">Select Medicine</label>
-                    <select onchange="updateTotal()" class="med-select form-input bg-white">${options}</select>
-                </div>
-                <div>
-                    <label class="form-label">Quantity</label>
-                    <input type="number" onchange="updateTotal()" value="1" min="1" class="med-qty form-input bg-white">
-                </div>
-                <div class="flex items-end pb-1">
-                    <button type="button" onclick="removeMedRow(${rowId})" class="w-full py-4 bg-red-50 text-red-500 rounded-xl font-bold uppercase text-[9px] tracking-widest">Remove</button>
-                </div>
-            `;
-            container.appendChild(row);
-            updateTotal();
-        }
-
-        function removeMedRow(id) { document.getElementById(`row-${id}`).remove(); updateTotal(); }
-
-        function updateTotal() {
-            let total = 0;
-            document.querySelectorAll('.med-selection-row').forEach(row => {
-                const select = row.querySelector('.med-select');
-                const qty = row.querySelector('.med-qty').value;
-                const price = select.options[select.selectedIndex].getAttribute('data-price');
-                total += parseFloat(price) * parseInt(qty);
-            });
-            document.getElementById('ps-total-display').innerText = total.toLocaleString();
-            document.getElementById('ps-total-val').value = total;
-        }
-
-        document.getElementById('pharmaSaleForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const items = [];
-            document.querySelectorAll('.med-selection-row').forEach(row => {
-                const select = row.querySelector('.med-select');
-                items.push({ id: select.value, qty: row.querySelector('.med-qty').value, name: select.options[select.selectedIndex].text });
-            });
-
-            const payload = { 
-                patient_name: document.getElementById('ps-name').value, 
-                phone: document.getElementById('ps-phone').value, 
-                age: document.getElementById('ps-age').value, 
-                problem: document.getElementById('ps-problem').value, 
-                items: items 
-            };
-            
-            const res = await fetch(`${API_BASE}/pharmacy/sell`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(payload) 
-            });
-            
-            if(res.ok) { 
-                alert("TRANSACTION FINALIZED: Inventory adjusted."); 
-                closeModal('modal-pharma-sell'); 
-                loadPharmacy(); 
+                finCols.forEach(c => c.style.display = 'none');
+                finStats.forEach(s => s.style.display = 'none');
             } else {
-                const err = await res.json();
-                alert("SALE FAILED: " + err.message);
+                finCols.forEach(c => c.style.display = 'table-cell');
+                finStats.forEach(s => s.style.display = 'flex');
             }
-        };
+        }
 
-        /**
-         * WARD & BEDS MANAGEMENT
-         */
-        async function loadBeds() {
-            const grid = document.getElementById('beds-grid');
-            const res = await fetch(`${API_BASE}/beds`);
+        if (page === 'appointments') loadAppointments();
+        if (page === 'history') loadHistory();
+        if (page === 'beds') loadBeds();
+        if (page === 'doctors') loadDoctors();
+        if (page === 'pharma-terminal' || page === 'pharma-archive') loadPharmacy();
+    }
+
+    /**
+     * DOCTOR CLINICAL WORKFLOW
+     */
+    async function setWorkflow(id, status) {
+        await fetch(`${API_BASE}/appointments/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        loadAppointments();
+        if (status === 'Completed') loadHistory();
+    }
+
+    /**
+     * DATA LOADERS
+     */
+    async function loadAppointments() {
+        const table = document.getElementById('appointment-rows');
+        table.innerHTML = '';
+        document.getElementById('app-loading').classList.remove('hidden');
+        
+        try {
+            let url = `${API_BASE}/appointments`;
+            if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
+            const res = await fetch(url);
             const data = await res.json();
-            grid.innerHTML = data.map(b => `
-                <div onclick="handleBedAction(${b.id}, '${b.status}')" class="bed-card ${b.status==='Occupied'?'status-occupied-ui':'status-available-ui'} cursor-pointer group">
-                    <i class="fa-solid fa-bed text-3xl mb-4 group-hover:scale-110 transition-all"></i>
-                    <p class="font-bold text-slate-800 text-3xl tracking-tighter">${b.bed_number}</p>
-                    <p class="text-[10px] uppercase font-bold text-slate-400 mt-2 tracking-widest">${b.ward}</p>
-                    <div class="mt-8"><span class="status-pill bg-white/50">${b.status}</span></div>
-                </div>`).join('');
-        }
+            document.getElementById('app-loading').classList.add('hidden');
+            
+            table.innerHTML = data.map(a => {
+                let workflow = '';
+                if (currentUser.role === 'Doctor' && currentUser.doctor_id == a.doctor_id) {
+                    if (a.status === 'Scheduled') workflow = `<button onclick="setWorkflow(${a.id}, 'Accepted')" class="ml-4 bg-emerald-500 text-white px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Accept</button>`;
+                    else if (a.status === 'Accepted') workflow = `<button onclick="setWorkflow(${a.id}, 'Completed')" class="ml-4 bg-[#d4af37] text-black px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Complete</button>`;
+                }
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="text-center font-bold text-sky-600 text-xs">${a.token_number}</td>
+                    <td class="font-bold uppercase text-xs text-slate-800">${a.patient_name}</td>
+                    <td class="font-medium text-slate-500 text-xs">${a.doctor_name}</td>
+                    <td class="text-[10px] font-bold text-slate-400 italic">${a.appointment_date}</td>
+                    <td>
+                        <span class="status-pill ${a.status==='Completed'?'bg-amber-50 text-amber-600':'bg-sky-50 text-sky-600'}">${a.status}</span>
+                        ${workflow}
+                    </td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="5" class="p-20 text-center uppercase font-bold text-slate-200">Empty Sessions</td></tr>`;
+        } catch (e) { console.error(e); }
+    }
 
-        async function handleBedAction(id, status) {
-            if (status === 'Occupied') {
-                const res = await fetch(`${API_BASE}/patient_by_bed/${id}`);
-                const d = await res.json();
-                document.getElementById('patient-detail-body').innerHTML = `
-                    <div class="space-y-6">
-                        <div><p class="form-label">Active Entity</p><p class="text-2xl font-bold uppercase tracking-tight text-slate-800">${d.patient_name}</p></div>
-                        <div class="pt-6 border-t border-slate-200"><p class="form-label">Managing Doctor</p><p class="font-bold text-sm uppercase">${d.doctor_name}</p></div>
-                        <div class="pt-6 border-t border-slate-200"><p class="form-label">Diagnosis Findings</p><p class="italic text-slate-500 text-sm">"${d.problem}"</p></div>
-                    </div>`;
-                document.getElementById('discharge-action-btn').onclick = () => processCheckout(id);
-                openModal('modal-patient-detail');
-            } else if (currentUser.role === 'Reception') openModal('modal-admit');
-        }
+    async function loadHistory() {
+        try {
+            let url = `${API_BASE}/history`;
+            if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (currentUser.role === 'Reception') {
+                document.getElementById('count-total').innerText = data.length;
+                document.getElementById('count-revenue').innerText = '₹' + data.reduce((s, h) => s + (h.total_bill || 0), 0).toLocaleString();
+                document.getElementById('count-stay').innerText = '4.2 Days'; 
+            }
 
-        async function processCheckout(id) {
-            if(!confirm("Authorize Institutional Discharge?")) return;
-            const res = await fetch(`${API_BASE}/discharge/${id}`, { method: 'POST' });
+            document.getElementById('history-rows').innerHTML = data.map(h => {
+                const stay = currentUser.role === 'Reception' ? `<td class="finance-col font-bold text-slate-600">${h.days_stayed || '0'} Days</td>` : '';
+                const bill = currentUser.role === 'Reception' ? `<td class="finance-col text-right font-bold text-amber-600">₹${(h.total_bill || 0).toLocaleString()}</td>` : '';
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td><p class="font-bold text-xs uppercase text-slate-800">${h.patient_name}</p><p class="text-[9px] text-slate-400">${h.patient_phone}</p></td>
+                    <td><p class="text-sm font-bold text-slate-600">${h.doctor_name}</p><p class="text-[10px] text-slate-400 italic">"${h.problem}"</p></td>
+                    <td><span class="text-[10px] font-bold text-slate-400 uppercase">${h.bed_number ? 'Bed ' + h.bed_number : 'OPD SESSION'}</span></td>
+                    ${stay}
+                    <td class="text-[10px] text-slate-400 font-medium">Log: ${h.admit_date?.split('T')[0]}</td>
+                    ${bill}
+                </tr>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+
+    /**
+     * PHARMACY HUB ENGINE
+     */
+    async function loadPharmacy() {
+        try {
+            const iRes = await fetch(`${API_BASE}/pharmacy/inventory`);
+            inventoryData = await iRes.json();
+            
+            document.getElementById('pharma-inventory-rows').innerHTML = inventoryData.map(i => `
+                <tr class="hover:bg-slate-50">
+                    <td class="font-bold text-slate-800 text-xs uppercase">${i.medicine_name}</td>
+                    <td class="text-red-500 font-bold text-[10px] uppercase">${i.expiry_date}</td>
+                    <td class="font-bold text-xs">${i.stock_quantity} Units</td>
+                    <td class="text-emerald-600 font-bold text-xs">₹${i.unit_price}</td>
+                    <td><button onclick="deleteMed(${i.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                </tr>`).join('');
+            
+            const hRes = await fetch(`${API_BASE}/pharmacy/history`);
+            const hData = await hRes.json();
+            document.getElementById('pharma-sales-rows').innerHTML = hData.sales.map(s => `
+                <tr class="hover:bg-slate-50">
+                    <td><p class="font-bold uppercase text-[11px] text-slate-800">${s.patient_name}</p></td>
+                    <td class="text-[10px] text-slate-400 font-bold uppercase">${s.patient_age}Y • ${s.patient_phone}</td>
+                    <td class="text-[10px] text-slate-500 italic">"${s.problem}"</td>
+                    <td class="text-[10px] text-slate-500 font-medium truncate max-w-[200px]">${s.medicines_list}</td>
+                    <td class="font-bold text-emerald-600 text-xs text-right">₹${s.total_bill.toLocaleString()}</td>
+                </tr>`).join('');
+            
+            if(document.getElementById('pharma-daily')) {
+                document.getElementById('pharma-daily').innerText = `₹${hData.daily.toLocaleString()}`;
+                document.getElementById('pharma-count').innerText = hData.sales.length;
+                document.getElementById('pharma-monthly').innerText = `₹${(hData.daily * 3.4).toLocaleString()}`;
+            }
+        } catch (e) { console.error("Link failed:", e); }
+    }
+
+    /**
+     * PHARMACY POS DYNAMIC LOGIC
+     */
+    function addMedRow() {
+        const container = document.getElementById('sale-items-container');
+        const rowId = Date.now();
+        const row = document.createElement('div');
+        row.className = 'med-selection-row p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in';
+        row.id = `row-${rowId}`;
+        
+        const options = inventoryData.map(i => `<option value="${i.id}" data-price="${i.unit_price}">${i.medicine_name} (₹${i.unit_price} | Stock: ${i.stock_quantity})</option>`).join('');
+        
+        row.innerHTML = `
+            <div>
+                <label class="form-label">Select Tablet</label>
+                <select onchange="updateTotal()" class="med-select form-input bg-white">${options}</select>
+            </div>
+            <div>
+                <label class="form-label">Quantity</label>
+                <input type="number" onchange="updateTotal()" value="1" min="1" class="med-qty form-input bg-white" placeholder="Qty">
+            </div>
+            <div class="flex items-end pb-1">
+                <button type="button" onclick="removeMedRow(${rowId})" class="w-full py-4 bg-red-50 text-red-500 rounded-xl font-bold uppercase text-[9px] tracking-widest"><i class="fa-solid fa-trash mr-1"></i> Remove</button>
+            </div>
+        `;
+        container.appendChild(row);
+        updateTotal();
+    }
+
+    function removeMedRow(id) { document.getElementById(`row-${id}`).remove(); updateTotal(); }
+
+    function updateTotal() {
+        let total = 0;
+        document.querySelectorAll('.med-selection-row').forEach(row => {
+            const select = row.querySelector('.med-select');
+            const qty = row.querySelector('.med-qty').value;
+            const price = select.options[select.selectedIndex].getAttribute('data-price');
+            total += parseFloat(price) * parseInt(qty);
+        });
+        document.getElementById('ps-total-display').innerText = total.toLocaleString();
+        document.getElementById('ps-total-val').value = total;
+    }
+
+    document.getElementById('pharmaSaleForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const items = [];
+        document.querySelectorAll('.med-selection-row').forEach(row => {
+            const select = row.querySelector('.med-select');
+            items.push({ id: select.value, qty: row.querySelector('.med-qty').value, name: select.options[select.selectedIndex].text });
+        });
+
+        const p = { 
+            patient_name: document.getElementById('ps-name').value, 
+            phone: document.getElementById('ps-phone').value, 
+            age: document.getElementById('ps-age').value, 
+            problem: document.getElementById('ps-problem').value, 
+            items: items,
+            total_bill: document.getElementById('ps-total-val').value 
+        };
+        
+        const res = await fetch(`${API_BASE}/pharmacy/sell`, { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(p) 
+        });
+        const result = await res.json();
+        if(res.ok) { 
+            alert("TRANSACTION FINALIZED: Stock updated successfully."); 
+            closeModal('modal-pharma-sell'); 
+            loadPharmacy(); 
+        } else alert("Error: " + result.message);
+    };
+
+    async function deleteMed(id) { if(confirm("Discard inventory record?")) { await fetch(`${API_BASE}/pharmacy/inventory/${id}`, { method: 'DELETE' }); loadPharmacy(); } }
+
+    document.getElementById('medicineForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const p = { medicine_name: document.getElementById('med-name').value, expiry_date: document.getElementById('med-expiry').value, stock_quantity: document.getElementById('med-qty').value, unit_price: document.getElementById('med-price').value };
+        await fetch(`${API_BASE}/pharmacy/inventory`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) });
+        closeModal('modal-medicine'); loadPharmacy();
+    };
+
+    /**
+     * SYSTEM INFRASTRUCTURE
+     */
+    async function loadBeds() {
+        const grid = document.getElementById('beds-grid');
+        const res = await fetch(`${API_BASE}/beds`);
+        const data = await res.json();
+        grid.innerHTML = data.map(b => `
+            <div onclick="handleBedAction(${b.id}, '${b.status}')" class="bed-card ${b.status==='Occupied'?'status-occupied-ui':'status-available-ui'} cursor-pointer group">
+                <i class="fa-solid fa-bed text-3xl mb-4 group-hover:scale-110 transition-all"></i>
+                <p class="font-bold text-slate-800 text-3xl tracking-tighter">${b.bed_number}</p>
+                <p class="text-[10px] uppercase font-bold text-slate-400 mt-2 tracking-widest">${b.ward}</p>
+                <div class="mt-8"><span class="status-pill bg-white/50">${b.status}</span></div>
+            </div>`).join('');
+    }
+
+    async function handleBedAction(id, status) {
+        if (status === 'Occupied') {
+            const res = await fetch(`${API_BASE}/patient_by_bed/${id}`);
             const d = await res.json();
-            alert(`SEQUENCE COMPLETE. Bill: ₹${d.bill.toLocaleString()}`);
-            closeModal('modal-patient-detail'); loadBeds(); loadHistory();
-        }
+            document.getElementById('patient-detail-body').innerHTML = `
+                <div class="space-y-6">
+                    <div><p class="form-label">Active Entity</p><p class="text-2xl font-bold uppercase tracking-tight text-slate-800">${d.patient_name}</p></div>
+                    <div class="pt-6 border-t border-slate-200"><p class="form-label">Managing Doctor</p><p class="font-bold text-sm uppercase">${d.doctor_name}</p></div>
+                    <div class="pt-6 border-t border-slate-200"><p class="form-label">Diagnosis Findings</p><p class="italic text-slate-500 text-sm">"${d.problem}"</p></div>
+                </div>`;
+            document.getElementById('discharge-action-btn').onclick = () => processCheckout(id);
+            openModal('modal-patient-detail');
+        } else if (currentUser.role === 'Reception') openModal('modal-admit');
+    }
 
-        async function loadDoctors() {
+    async function processCheckout(id) {
+        if(!confirm("Authorize Institutional Discharge protocol?")) return;
+        const res = await fetch(`${API_BASE}/discharge/${id}`, { method: 'POST' });
+        const d = await res.json();
+        alert(`SEQUENCE COMPLETE. Institutional Invoice: ₹${d.bill.toLocaleString()}`);
+        closeModal('modal-patient-detail'); loadBeds(); loadHistory();
+    }
+
+    async function loadDoctors() {
+        const res = await fetch(`${API_BASE}/doctors`);
+        const data = await res.json();
+        document.getElementById('doctors-list').innerHTML = data.map(d => `
+            <div class="doctor-card group border-slate-100 hover:border-[#d4af37] transition-all">
+                <div class="w-14 h-14 bg-slate-50 border rounded-3xl flex items-center justify-center text-[#d4af37] text-2xl group-hover:bg-[#d4af37] group-hover:text-black transition-all"><i class="fa-solid fa-user-doctor"></i></div>
+                <div><h4 class="font-bold text-slate-800 text-xl uppercase tracking-tighter">${d.name}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1">${d.specialization}</p>
+                <div class="mt-4"><span class="status-pill ${d.is_available?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-400'}">${d.is_available?'Authorized':'Away'}</span></div></div>
+            </div>`).join('');
+    }
+
+    async function validateTokenForAdmission() {
+        const res = await fetch(`${API_BASE}/validate_token/${document.getElementById('bb-token-input').value}`);
+        const r = await res.json();
+        if (r.status === 'success') {
+            activeValidatedPatient = r.data;
+            document.getElementById('token-validation-info').classList.remove('hidden');
+            document.getElementById('valid-name-display').innerText = r.data.patient_name;
+            document.getElementById('bb-patient-name').value = r.data.patient_name;
+            document.getElementById('bb-patient-phone').value = r.data.patient_phone;
+            document.getElementById('bb-doctor-select').value = r.data.doctor_id;
+        } else alert("REF REJECTED");
+    }
+
+    document.getElementById('admitForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if(!activeValidatedPatient) return alert("Verify Clinical ID Token first.");
+        const p = { token_number: activeValidatedPatient.token_number, patient_name: activeValidatedPatient.patient_name, phone: activeValidatedPatient.patient_phone, doctor_id: document.getElementById('bb-doctor-select').value, age: document.getElementById('bb-age').value, problem: document.getElementById('bb-problem').value, bed_id: document.getElementById('bb-bed-select').value, date: new Date().toISOString() };
+        const res = await fetch(`${API_BASE}/admit`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(p) });
+        if(res.ok) { alert("INPATIENT ADMISSION FINALIZED."); closeModal('modal-admit'); loadBeds(); loadHistory(); }
+    };
+
+    document.getElementById('appointmentForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const p = { patient_name: document.getElementById('ap-pat-name').value, patient_phone: document.getElementById('ap-pat-phone').value, doctor_id: document.getElementById('ap-doctor-select').value, date: document.getElementById('ap-time').value };
+        const res = await fetch(`${API_BASE}/appointments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
+        const d = await res.json(); alert("TOKEN AUTHORIZED: " + d.token); closeModal('modal-appointment'); loadAppointments();
+    };
+
+    /**
+     * GLOBAL UTILS
+     */
+    async function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        if (id==='modal-appointment' || id==='modal-admit') {
             const res = await fetch(`${API_BASE}/doctors`);
-            const data = await res.json();
-            document.getElementById('doctors-list').innerHTML = data.map(d => `
-                <div class="doctor-card group border-slate-100 hover:border-[#d4af37] transition-all">
-                    <div class="w-14 h-14 bg-slate-50 border rounded-3xl flex items-center justify-center text-[#d4af37] text-2xl group-hover:bg-[#d4af37] group-hover:text-black transition-all"><i class="fa-solid fa-user-doctor"></i></div>
-                    <div><h4 class="font-bold text-slate-800 text-xl uppercase tracking-tighter">${d.name}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1">${d.specialization}</p>
-                    <div class="mt-4"><span class="status-pill ${d.is_available?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-400'}">${d.is_available?'Authorized':'Away'}</span></div></div>
-                </div>`).join('');
-        }
-
-        async function validateTokenForAdmission() {
-            const token = document.getElementById('bb-token-input').value;
-            const res = await fetch(`${API_BASE}/validate_token/${token}`);
-            const r = await res.json();
-            if (r.status === 'success') {
-                activeValidatedPatient = r.data;
-                document.getElementById('token-validation-info').classList.remove('hidden');
-                document.getElementById('valid-name-display').innerText = r.data.patient_name;
-                document.getElementById('bb-patient-name').value = r.data.patient_name;
-                document.getElementById('bb-patient-phone').value = r.data.patient_phone;
-                document.getElementById('bb-doctor-select').value = r.data.doctor_id;
-            } else {
-                alert("TOKEN INVALID OR EXPIRED");
+            const docs = await res.json();
+            const opts = `<option value="">Select Consultant</option>` + docs.map(d => `<option value="${d.id}">${d.name} (${d.specialization})</option>`).join('');
+            if(id==='modal-appointment') document.getElementById('ap-doctor-select').innerHTML = opts;
+            if(id==='modal-admit') {
+                document.getElementById('bb-doctor-select').innerHTML = opts;
+                const bRes = await fetch(`${API_BASE}/beds`);
+                const beds = await bRes.json();
+                document.getElementById('bb-bed-select').innerHTML = beds.filter(b=>b.status==='Available').map(b=>`<option value="${b.id}">${b.bed_number} (${b.ward})</option>`).join('');
             }
         }
-
-        document.getElementById('admitForm').onsubmit = async (e) => {
-            e.preventDefault();
-            if(!activeValidatedPatient) return alert("Please validate Clinical Token first.");
-            const p = { 
-                token_number: activeValidatedPatient.token_number, 
-                patient_name: activeValidatedPatient.patient_name, 
-                phone: activeValidatedPatient.patient_phone, 
-                doctor_id: document.getElementById('bb-doctor-select').value, 
-                age: document.getElementById('bb-age').value, 
-                problem: document.getElementById('bb-problem').value, 
-                bed_id: document.getElementById('bb-bed-select').value, 
-                date: new Date().toISOString() 
-            };
-            const res = await fetch(`${API_BASE}/admit`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(p) });
-            if(res.ok) { alert("INPATIENT ADMITTED."); closeModal('modal-admit'); loadBeds(); loadHistory(); }
-        };
-
-        document.getElementById('appointmentForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const p = { 
-                patient_name: document.getElementById('ap-pat-name').value, 
-                patient_phone: document.getElementById('ap-pat-phone').value, 
-                doctor_id: document.getElementById('ap-doctor-select').value, 
-                date: document.getElementById('ap-time').value 
-            };
-            const res = await fetch(`${API_BASE}/appointments`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(p) 
-            });
-            const d = await res.json(); 
-            alert("APPOINTMENT REGISTERED. Token: " + d.token); 
-            closeModal('modal-appointment'); 
-            loadAppointments();
-        };
-
-        /**
-         * PHARMACY INVENTORY UPDATE
-         */
-        document.getElementById('medicineForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const p = { 
-                medicine_name: document.getElementById('med-name').value, 
-                expiry_date: document.getElementById('med-expiry').value, 
-                stock_quantity: document.getElementById('med-qty').value, 
-                unit_price: document.getElementById('med-price').value 
-            };
-            await fetch(`${API_BASE}/pharmacy/inventory`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(p) 
-            });
-            closeModal('modal-medicine'); 
-            loadPharmacy();
-        };
-
-        async function deleteMed(id) { 
-            if(confirm("Discard inventory record?")) { 
-                await fetch(`${API_BASE}/pharmacy/inventory/${id}`, { method: 'DELETE' }); 
-                loadPharmacy(); 
-            } 
+        if(id === 'modal-pharma-sell') {
+            document.getElementById('sale-items-container').innerHTML = '';
+            document.getElementById('pharmaSaleForm').reset();
+            addMedRow();
         }
+    }
 
-        /**
-         * GLOBAL UTILS
-         */
-        async function openModal(id) {
-            document.getElementById(id).classList.remove('hidden');
-            if (id==='modal-appointment' || id==='modal-admit') {
-                const res = await fetch(`${API_BASE}/doctors`);
-                const docs = await res.json();
-                const opts = `<option value="">Select Consultant</option>` + docs.map(d => `<option value="${d.id}">${d.name} (${d.specialization})</option>`).join('');
-                if(id==='modal-appointment') document.getElementById('ap-doctor-select').innerHTML = opts;
-                if(id==='modal-admit') {
-                    document.getElementById('bb-doctor-select').innerHTML = opts;
-                    const bRes = await fetch(`${API_BASE}/beds`);
-                    const beds = await bRes.json();
-                    document.getElementById('bb-bed-select').innerHTML = beds.filter(b=>b.status==='Available').map(b=>`<option value="${b.id}">${b.bed_number} (${b.ward})</option>`).join('');
-                }
-            }
-            if(id === 'modal-pharma-sell') {
-                document.getElementById('sale-items-container').innerHTML = '';
-                document.getElementById('pharmaSaleForm').reset();
-                addMedRow();
-            }
-        }
-
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-    </script>
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>

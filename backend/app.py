@@ -12,8 +12,12 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Updated CORS to allow your Render domain and handle cross-origin requests properly
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Updated CORS for Production Deployment
+CORS(app, resources={r"/api/*": {
+    "origins": ["https://hosp-l3oy.onrender.com", "http://localhost:3000", "http://localhost:5173", "*"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
 
 # Global Security & Headers Middleware
 @app.after_request
@@ -21,14 +25,12 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
-    # Prevent MIME-type sniffing
     response.headers.add('X-Content-Type-Options', 'nosniff')
-    # Prevent Clickjacking
     response.headers.add('X-Frame-Options', 'DENY')
     return response
 
-# Dynamic database path for Render persistence
-DB_PATH = os.environ.get('DATABASE_URL', 'hospital.db')
+# Standard Database Path
+DB_PATH = "hospital.db"
 LOG_FILE = "hospital_system.log"
 
 # --- CORE LOGGING INFRASTRUCTURE ---
@@ -178,25 +180,28 @@ def init_db():
 
     # --- SEEDING ENTERPRISE DATA ---
     
+    # Administrative Accounts
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("reception", "admin", "Reception")')
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("pharmacy", "admin", "Pharmacy")')
     cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES ("admin", "root", "Administrator")')
     
-    doctors = [
+    # Professional Specialists
+    doctors_seed = [
         ("dr1", "admin", "Doctor", "Dr. TEJA", "Cardiology", 850),
         ("dr2", "admin", "Doctor", "Dr. DHANUSH", "Neurology", 1200),
         ("dr3", "admin", "Doctor", "Dr. BHARATH KUMAR", "Pediatrics", 500),
         ("dr4", "admin", "Doctor", "Dr. MOUNIKA", "Orthopedics", 750),
         ("dr5", "admin", "Doctor", "Dr. RAJU", "General Medicine", 400)
     ]
-    for usr, pwd, role, name, spec, fee in doctors:
+    for usr, pwd, role, name, spec, fee in doctors_seed:
         cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)', (usr, pwd, role))
         u_row = cursor.execute('SELECT id FROM users WHERE username = ?', (usr,)).fetchone()
         if u_row:
             u_id = u_row[0]
             cursor.execute('INSERT OR IGNORE INTO doctors (user_id, name, specialization, consultation_fee) VALUES (?, ?, ?, ?)', (u_id, name, spec, fee))
 
-    beds = [
+    # Bed Assets & Pricing
+    beds_seed = [
         ('B-101', 'General Ward A', 'Standard', 350),
         ('B-102', 'General Ward A', 'Standard', 350),
         ('B-103', 'General Ward A', 'Standard', 350),
@@ -208,7 +213,7 @@ def init_db():
         ('P-201', 'VIP Suite', 'Deluxe', 1800),
         ('P-202', 'VIP Suite', 'Deluxe', 1800)
     ]
-    for b_no, ward, b_type, price in beds:
+    for b_no, ward, b_type, price in beds_seed:
         cursor.execute('INSERT OR IGNORE INTO beds (bed_number, ward, type, base_price, last_sanitized) VALUES (?, ?, ?, ?, ?)', 
                        (b_no, ward, b_type, price, datetime.now().isoformat()))
 
@@ -216,46 +221,41 @@ def init_db():
     conn.close()
     log_system_event("SYSTEM", "INIT", "Clinical Engine V4.0 successfully deployed.")
 
-# --- HOME ROUTE ---
+# --- BASE ROUTES ---
 
 @app.route("/")
 def home():
-    return "HMS Backend Running 🚀"
+    return "HMS Backend Live 🚀"
 
 # --- AUTHENTICATION & SESSION MANAGEMENT ---
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.get_json()
-
-    if not data:
-        return jsonify({"status": "error", "message": "No data received"}), 400
-
-    username = data.get('username')
-    password = data.get('password')
-
-    if not username or not password:
-        return jsonify({"status": "error", "message": "Missing credentials"}), 400
-
-    conn = get_db()
-    user = conn.execute('''
-        SELECT u.*, d.id as doctor_id 
-        FROM users u 
-        LEFT JOIN doctors d ON u.id = d.user_id 
-        WHERE u.username = ? AND u.password = ?
-    ''', (username, password)).fetchone()
-
-    if user:
+    try:
+        data = request.json
+        conn = get_db()
+        user = conn.execute('''
+            SELECT u.*, d.id as doctor_id 
+            FROM users u 
+            LEFT JOIN doctors d ON u.id = d.user_id 
+            WHERE u.username = ? AND u.password = ?
+        ''', (data['username'], data['password'])).fetchone()
+        
+        if user:
+            conn.execute('UPDATE users SET last_login = ? WHERE id = ?', (datetime.now().isoformat(), user['id']))
+            conn.commit()
+            conn.close()
+            log_system_event(user['username'], "AUTH", "Successful authentication.")
+            return jsonify({
+                "status": "success", 
+                "role": user['role'], 
+                "username": user['username'],
+                "doctor_id": user['doctor_id']
+            })
         conn.close()
-        return jsonify({
-            "status": "success",
-            "role": user['role'],
-            "username": user['username'],
-            "doctor_id": user['doctor_id']
-        })
-
-    conn.close()
-    return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+        return jsonify({"status": "error", "message": "Access Denied: Invalid Security Token"}), 401
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- DOCTOR & CLINICAL MANAGEMENT ---
 
@@ -270,7 +270,7 @@ def get_doctors():
 def appointments():
     conn = get_db()
     if request.method == 'POST':
-        data = request.get_json()
+        data = request.json
         token = generate_unique_token()
         conn.execute('''
             INSERT INTO appointments (token_number, patient_name, patient_phone, doctor_id, appointment_date, status) 
@@ -294,7 +294,7 @@ def appointments():
 
 @app.route('/api/appointments/<int:apt_id>/status', methods=['POST'])
 def update_appointment_status(apt_id):
-    data = request.get_json()
+    data = request.json
     new_status = data.get('status')
     conn = get_db()
     conn.execute('UPDATE appointments SET status = ? WHERE id = ?', (new_status, apt_id))
@@ -341,9 +341,10 @@ def get_patient_by_bed(bed_id):
 
 @app.route('/api/admit', methods=['POST'])
 def admit_patient():
-    data = request.get_json()
+    data = request.json
     conn = get_db()
     try:
+        # VALIDATE NO DOUBLE ADMISSION
         existing = conn.execute('SELECT id FROM admissions WHERE token_number = ? AND discharge_date IS NULL', (data['token_number'],)).fetchone()
         if existing:
             return jsonify({"status": "error", "message": "PATIENT ALREADY ADMITTED TO A WARD."}), 400
@@ -359,7 +360,7 @@ def admit_patient():
         conn.commit()
         return jsonify({"status": "success"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         conn.close()
 
@@ -428,7 +429,7 @@ def get_history():
 def pharmacy_inventory():
     conn = get_db()
     if request.method == 'POST':
-        data = request.get_json()
+        data = request.json
         if data.get('id'):
             conn.execute('''
                 UPDATE pharmacy_inventory SET medicine_name=?, expiry_date=?, stock_quantity=?, unit_price=? WHERE id=?
@@ -456,7 +457,7 @@ def delete_medicine(med_id):
 
 @app.route('/api/pharmacy/sell', methods=['POST'])
 def sell_medicine():
-    data = request.get_json()
+    data = request.json
     conn = get_db()
     now = datetime.now().isoformat()
     try:
@@ -467,11 +468,10 @@ def sell_medicine():
             res = conn.execute('SELECT stock_quantity, unit_price, medicine_name FROM pharmacy_inventory WHERE id = ?', (item['id'],)).fetchone()
             
             if not res or res['stock_quantity'] < int(item['qty']):
-                return jsonify({"status": "error", "message": f"Insufficient stock for {item['name'] or 'ID '+str(item['id'])}"}), 400
+                return jsonify({"status": "error", "message": f"Insufficient stock for {item['name'] or 'Medicine ID '+str(item['id'])}"}), 400
             
             new_qty = res['stock_quantity'] - int(item['qty'])
             conn.execute('UPDATE pharmacy_inventory SET stock_quantity = ? WHERE id = ?', (new_qty, item['id']))
-            
             total_bill += (res['unit_price'] * int(item['qty']))
             med_summary += f"{res['medicine_name']} (x{item['qty']}), "
 
@@ -484,7 +484,7 @@ def sell_medicine():
         return jsonify({"status": "success", "bill": total_bill})
     except Exception as e:
         conn.rollback()
-        return jsonify({"status": "error", "message": str(e)})
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         conn.close()
 
@@ -495,7 +495,10 @@ def get_pharmacy_history():
     today = datetime.now().strftime('%Y-%m-%d')
     daily = conn.execute('SELECT SUM(total_bill) FROM pharmacy_sales WHERE sale_date LIKE ?', (f'{today}%',)).fetchone()[0] or 0
     conn.close()
-    return jsonify({"sales": [dict(s) for s in sales], "daily": daily})
+    return jsonify({
+        "sales": [dict(s) for s in sales],
+        "daily": daily
+    })
 
 @app.route('/api/pharmacy/income', methods=['GET'])
 def get_pharmacy_income():
@@ -514,6 +517,6 @@ def get_pharmacy_income():
 
 if __name__ == '__main__':
     init_db()
-    # Handle dynamic port assignment for Render
+    # Dynamic Port logic for Render
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, port=port, host='0.0.0.0')
