@@ -235,12 +235,13 @@ def login():
     try:
         data = request.get_json(force=True)
         conn = get_db()
+        # FIXED: Corrected SQL execution syntax bug (query and parameters were improperly closed before fetchone)
         user = conn.execute('''
             SELECT u.*, d.id as doctor_id 
             FROM users u 
             LEFT JOIN doctors d ON u.id = d.user_id 
             WHERE u.username = ? AND u.password = ?
-        '''), (data.get('username'), data.get('password')).fetchone()
+        ''', (data.get('username'), data.get('password'))).fetchone()
         
         if user:
             conn.execute('UPDATE users SET last_login = ? WHERE id = ?', (datetime.now().isoformat(), user['id']))
@@ -519,6 +520,8 @@ def get_pharmacy_income():
     
 if __name__ == '__main__':
     # 1. Force the creation of the database and tables using context manager
+    # FIXED: Ensured database initializes automatically on server start by calling init_db() directly
+    init_db() 
     with app.app_context():
         print("Database Initialization Started...")
         init_db() 
