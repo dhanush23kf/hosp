@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Care - Hospital Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* * DHANUSH HIS - CORE ARCHITECTURE v4.6
+         * THEME: ROYAL ENTERPRISE
+         */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-gold: #d4af37;
+            --dark-bg: #14120e;
+            --sidebar-active: #2d2618;
+            --border-light: #f1f5f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow: hidden; /* FIX: PREVENTS WHOLE BODY BLINKING */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 1. LOGIN SCREEN STYLING */
+        .login-screen {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1920');
+            background-size: cover;
+            background-position: center;
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 4rem;
+            border-radius: 3rem;
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+        }
+
+        /* 2. SIDEBAR NAVIGATION */
+        .sidebar {
+            background-color: var(--dark-bg);
+            width: 300px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 100;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+
+        .nav-brand {
+            padding: 2.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item {
+            color: rgba(255, 255, 255, 0.6);
+            transition: all 0.2s ease-in-out;
+            border-left: 4px solid transparent;
+            padding: 1.25rem 2rem;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 1.5rem;
+            margin-right: 1rem;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .nav-item:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            border-left-color: var(--primary-gold);
+        }
+
+        /* 3. CONTENT AREA */
+        main {
+            flex: 1;
+            overflow: hidden; /* FIX: PREVENTS NESTED SCROLL BLINKING */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8fafc;
+        }
+
+        header {
+            padding: 3rem 3rem 1.5rem 3rem;
+            flex-shrink: 0;
+        }
+
+        .content-body {
+            padding: 0 3rem 3rem 3rem;
+            flex: 1;
+            overflow-y: auto; /* SCROLL ONLY CONTENT */
+        }
+
+        /* 4. SCROLLBARS */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* 5. DATA TABLES */
+        .royal-table-container {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .royal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .royal-table thead th {
+            letter-spacing: 0.1em;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            padding: 1.25rem 2rem;
+            background-color: #fcfcfc;
+            border-bottom: 1px solid var(--border-light);
+            text-align: left;
+        }
+
+        .royal-table tbody td {
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid #f8fafc;
+            color: #334155;
+            font-size: 0.875rem;
+        }
+
+        .royal-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .royal-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* 6. STATUS BADGES */
+        .status-pill {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.75rem;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
+
+        /* 7. CARD UI SYSTEMS */
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .stat-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .bed-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border-light);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bed-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -10px rgba(0,0,0,0.1);
+        }
+
+        .bed-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .status-available-ui { background-color: #ecfdf5 !important; color: #10b981 !important; border: 1px solid #10b98133 !important; }
+        .status-occupied-ui { background-color: #fef2f2 !important; color: #ef4444 !important; border: 1px solid #ef444433 !important; }
+
+        /* 8. MODALS & FORMS */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 6000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 2.5rem;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        .modal-header {
+            padding: 2.5rem 3rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 2.5rem 3rem;
+            overflow-y: auto;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            background-color: #f8fafc;
+            border: 2px solid #f1f5f9;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-gold);
+            background-color: white;
+            outline: none;
+        }
+
+        /* 9. DOCTOR CARDS */
+        .doctor-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .doc-avatar {
+            width: 4rem;
+            height: 4rem;
+            background-color: #f8fafc;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-gold);
+            font-size: 1.5rem;
+        }
+
+        /* 10. PHARMACY DYNAMIC ITEMS */
+        .med-selection-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+
+        /* 11. ROLE ISOLATION HELPERS */
+        .finance-col { display: table-cell; }
+        .doctor-view .finance-col { display: none !important; }
+        .doctor-view .finance-stat { display: none !important; }
+
+    </style>
+</head>
+<body class="flex">
+
+    <div id="login-screen" class="login-screen">
+        <div class="glass-card">
+            <h1 class="text-4xl font-bold text-[#d4af37] mb-2 tracking-tighter">DHANUSH</h1>
+            <p class="text-[10px] opacity-50 uppercase tracking-[0.4em] mb-10 text-white font-bold">Health Information System</p>
+            
+            <form id="loginForm" class="text-left space-y-5">
+                <div>
+                    <label class="form-label text-white opacity-80">Institutional Username</label>
+                    <input type="text" id="username" required placeholder="Institutional ID" 
+                           class="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:bg-white/20 transition-all">
+                </div>
+                <div>
+                    <label class="form-label text-white opacity-80">Security Token</label>
+                    <input type="password" id="password" required placeholder="Security Key" 
+                           class="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:bg-white/20 transition-all">
+                </div>
+                <button type="submit" class="w-full bg-[#d4af37] text-black font-bold py-5 rounded-2xl shadow-xl mt-4 active:scale-95 transition-transform uppercase text-xs tracking-widest">
+                    Authorize Session
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden flex w-full h-full">
+        
+        <aside class="sidebar">
+            <div class="nav-brand">
+                <h2 class="text-2xl font-bold text-[#d4af37] tracking-tight">DHANUSH</h2>
+                <p class="text-[9px] opacity-30 uppercase tracking-[0.3em] mt-1 font-bold">Royal Care Institute</p>
+            </div>
+
+            <div class="px-8 py-10 flex items-center space-x-4 border-b border-white/5">
+                <div id="user-avatar" class="w-14 h-14 rounded-2xl bg-[#d4af37] flex items-center justify-center text-black font-bold text-2xl uppercase shadow-lg">?</div>
+                <div class="overflow-hidden">
+                    <p id="display-name" class="text-sm font-semibold text-white truncate max-w-[150px]"></p>
+                    <p id="display-role" class="text-[10px] text-[#d4af37] uppercase tracking-widest font-bold mt-1"></p>
+                </div>
+            </div>
+
+            <nav id="nav-links" class="flex-1 px-4 mt-8 space-y-1">
+                </nav>
+
+            <div class="p-8">
+                <button onclick="logoutApp()" class="w-full py-4 rounded-2xl bg-white/5 border border-[#d4af37]/20 text-[#d4af37] text-[11px] font-bold uppercase tracking-widest hover:bg-[#d4af37] hover:text-black transition-all">
+                    <i class="fa-solid fa-power-off mr-3"></i> Terminate
+                </button>
+            </div>
+        </aside>
+
+        <main id="main-viewport">
+            
+            <header>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 id="view-title" class="text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
+                        <p id="view-desc" class="text-sm text-slate-500 mt-1 font-medium italic"></p>
+                    </div>
+                    <div id="header-actions" class="flex gap-4 pb-1">
+                        </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                
+                <section id="sec-appointments" class="hidden">
+                    <div class="royal-table-container">
+                        <table class="royal-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center w-24">Token</th>
+                                    <th>Patient Profile</th>
+                                    <th>Assigned Specialist</th>
+                                    <th>Scheduled Time</th>
+                                    <th>Workflow State</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointment-rows"></tbody>
+                        </table>
+                        <div id="app-loading" class="p-20 text-center text-slate-300 hidden">
+                            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-4 text-[#d4af37]"></i>
+                            <p class="text-[10px] font-bold uppercase tracking-widest">Synchronizing Registry...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="sec-beds" class="hidden">
+                    <div id="beds-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8"></div>
+                </section>
+
+                <section id="sec-doctors" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="doctors-list"></div>
+                </section>
+
+                <section id="sec-history" class="hidden">
+                    <div id="history-analytics" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-emerald-50 text-emerald-500"><i class="fa-solid fa-check-double"></i></div>
+                            <div><p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total Resolved</p><p id="count-total" class="text-2xl font-bold text-slate-800">0</p></div>
+                        </div>
+                        <div class="stat-card finance-stat">
+                            <div class="stat-icon bg-sky-50 text-sky-500"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                            <div><p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Net Revenue</p><p id="count-revenue" class="text-2xl font-bold text-slate-800">₹0</p></div>
+                        </div>
+                        <div class="stat-card finance-stat">
+                            <div class="stat-icon bg-amber-50 text-amber-500"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div><p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Mean Stay</p><p id="count-stay" class="text-2xl font-bold text-slate-800">0 Days</p></div>
+                        </div>
+                    </div>
+
+                    <div class="royal-table-container overflow-x-auto">
+                        <table class="royal-table">
+                            <thead>
+                                <tr>
+                                    <th>Token / Patient</th>
+                                    <th>Consultant / Reason</th>
+                                    <th>Ward Asset</th>
+                                    <th class="finance-col">Stay Length</th>
+                                    <th>Log Date</th>
+                                    <th class="finance-col text-right">Invoice Bill</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-rows"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="sec-pharma-terminal" class="hidden">
+                    <div class="flex justify-between items-center mb-10 p-10 bg-slate-900 rounded-[3rem] shadow-2xl">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Pharmacy Hub</h2>
+                            <p class="text-xs font-bold text-[#d4af37] uppercase tracking-widest mt-1">Dispensing & Inventory Terminal</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="openModal('modal-pharma-sell')" class="bg-[#d4af37] text-black px-10 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-lg hover:scale-105 transition-all">
+                                <i class="fa-solid fa-plus-circle mr-2"></i> New Medicine Sale
+                            </button>
+                            <button onclick="openModal('modal-medicine')" class="bg-white/10 text-white border border-white/20 px-10 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest hover:bg-white/20 transition-all">
+                                <i class="fa-solid fa-box-open mr-2"></i> Update Stock
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="royal-table-container">
+                        <div class="p-8 border-b border-slate-50 bg-slate-50/50">
+                            <h3 class="font-bold text-slate-800">Clinical Drug Inventory</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">Real-time Stock Ledger</p>
+                        </div>
+                        <div class="max-h-[600px] overflow-y-auto">
+                            <table class="royal-table">
+                                <thead class="sticky top-0 z-10">
+                                    <tr><th>Identifier</th><th>Expiry Date</th><th>Stock Left</th><th>Unit Price</th><th>Control</th></tr>
+                                </thead>
+                                <tbody id="pharma-inventory-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="sec-pharma-archive" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                        <div class="stat-card bg-slate-900 border-none shadow-2xl">
+                            <div class="stat-icon bg-white/5 text-[#d4af37]"><i class="fa-solid fa-bolt-lightning"></i></div>
+                            <div><p class="text-[10px] uppercase font-bold text-white/40 tracking-widest">Daily Intake</p><p id="pharma-daily" class="text-3xl font-bold text-white">₹0</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-emerald-50 text-emerald-500"><i class="fa-solid fa-user-tag"></i></div>
+                            <div><p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total Served</p><p id="pharma-count" class="text-3xl font-bold text-slate-800">0</p></div>
+                        </div>
+                    </div>
+
+                    <div class="royal-table-container">
+                        <div class="p-10 border-b border-slate-50 bg-slate-50/50">
+                            <h3 class="font-bold text-slate-800">Patient Dispensary Log</h3>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Transaction History</p>
+                        </div>
+                        <table class="royal-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Profile</th>
+                                    <th>Age/Phone</th>
+                                    <th>Clinical Reason</th>
+                                    <th>Medications</th>
+                                    <th class="text-right">Final Bill</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pharma-sales-rows"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-pharma-sell" class="hidden modal-overlay">
+        <div class="modal-container max-w-4xl">
+            <div class="modal-header">
+                <div><h3 class="text-3xl font-bold text-slate-800">New Dispense Session</h3><p class="text-[11px] font-bold text-slate-400 uppercase mt-1">Institutional Sale Terminal</p></div>
+                <button onclick="closeModal('modal-pharma-sell')" class="text-slate-300 hover:text-black transition-colors"><i class="fa-solid fa-circle-xmark text-4xl"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="pharmaSaleForm" class="space-y-10">
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="space-y-2"><label class="form-label">Full Patient Identity</label><input type="text" id="ps-name" required placeholder="Legal Name" class="form-input"></div>
+                        <div class="space-y-2"><label class="form-label">Secure Contact Number</label><input type="text" id="ps-phone" required placeholder="+91 XXXXX XXXXX" class="form-input"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="space-y-2"><label class="form-label">Clinical Age</label><input type="number" id="ps-age" required placeholder="Years" class="form-input"></div>
+                        <div class="space-y-2"><label class="form-label">Diagnosis / Problem</label><input type="text" id="ps-problem" required placeholder="Reason for medicine" class="form-input"></div>
+                    </div>
+
+                    <div class="pt-10 border-t border-slate-100">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-[11px] font-bold uppercase text-slate-400 tracking-widest">Medication Inventory Selection</h4>
+                            <button type="button" onclick="addMedRow()" class="text-sky-600 font-bold text-[10px] uppercase tracking-widest hover:text-sky-700 transition-all"><i class="fa-solid fa-circle-plus mr-1"></i> Add Tablet Item</button>
+                        </div>
+                        <div id="sale-items-container" class="space-y-4">
+                            </div>
+                    </div>
+
+                    <div class="p-12 bg-slate-900 rounded-[3rem] text-white flex justify-between items-center shadow-2xl ring-8 ring-slate-50">
+                        <div>
+                            <p class="text-[11px] font-bold text-[#d4af37] uppercase tracking-[0.3em]">Institutional Net Invoice</p>
+                            <div class="flex items-center gap-4 mt-2">
+                                <span class="text-3xl font-bold text-[#d4af37]">₹</span>
+                                <span id="ps-total-display" class="text-6xl font-bold tracking-tighter">0</span>
+                                <input type="hidden" id="ps-total-val" value="0">
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-[#d4af37] text-black px-16 py-6 rounded-[2rem] font-bold uppercase text-xs tracking-widest shadow-xl transform active:scale-95 transition-all">
+                            Finalize Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-medicine" class="hidden modal-overlay">
+        <div class="modal-container max-w-lg">
+            <div class="modal-header"><h3 class="text-2xl font-bold">Inventory Ledger</h3><button onclick="closeModal('modal-medicine')"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="modal-body">
+                <form id="medicineForm" class="space-y-6">
+                    <input type="hidden" id="med-id">
+                    <div><label class="form-label">Medicine Identifier</label><input type="text" id="med-name" required placeholder="Product Name" class="form-input"></div>
+                    <div><label class="form-label">Expiry Documentation</label><input type="date" id="med-expiry" required class="form-input"></div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div><label class="form-label">Opening Stock</label><input type="number" id="med-qty" required placeholder="Units" class="form-input"></div>
+                        <div><label class="form-label">Institutional Price (₹)</label><input type="number" id="med-price" required placeholder="0.00" class="form-input"></div>
+                    </div>
+                    <button type="submit" class="w-full py-5 bg-black text-white rounded-[2rem] font-bold uppercase text-[10px] tracking-widest shadow-2xl">Authorize Entry</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-appointment" class="hidden modal-overlay">
+        <div class="modal-container max-w-md">
+            <div class="modal-header"><h3 class="text-2xl font-bold text-slate-800">New Token</h3><button onclick="closeModal('modal-appointment')">X</button></div>
+            <div class="modal-body">
+                <form id="appointmentForm" class="space-y-6">
+                    <input type="text" id="ap-pat-name" required placeholder="Patient Legal Name" class="form-input">
+                    <input type="text" id="ap-pat-phone" required placeholder="Institutional Phone" class="form-input">
+                    <select id="ap-doctor-select" required class="form-input"></select>
+                    <input type="datetime-local" id="ap-time" required class="form-input">
+                    <button type="submit" class="w-full py-5 bg-black text-white rounded-[2rem] font-bold uppercase text-[10px]">Generate ID</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-admit" class="hidden modal-overlay">
+        <div class="modal-container max-w-3xl">
+            <div class="modal-header"><div><h3 class="text-3xl font-bold">Inpatient admission</h3><p class="text-[10px] font-bold uppercase text-slate-400 mt-1 tracking-widest">Ward Protocol</p></div><button onclick="closeModal('modal-admit')">X</button></div>
+            <div class="modal-body">
+                <form id="admitForm" class="space-y-8">
+                    <div class="p-8 bg-slate-900 rounded-[3rem] text-white flex items-center gap-6">
+                        <input type="text" id="bb-token-input" placeholder="ENTER TOKEN" class="flex-1 bg-white/10 px-8 py-5 border-none outline-none rounded-[1.75rem] font-bold text-white uppercase tracking-widest">
+                        <button type="button" onclick="validateTokenForAdmission()" class="bg-[#d4af37] text-black px-10 py-5 rounded-[1.75rem] font-bold uppercase text-[11px]">Verify</button>
+                    </div>
+                    <div id="token-validation-info" class="hidden flex items-center gap-4 p-4 bg-emerald-500/10 rounded-2xl">
+                        <i class="fa-solid fa-shield-check text-emerald-500"></i>
+                        <p id="valid-name-display" class="font-bold text-emerald-600 uppercase"></p>
+                    </div>
+                    <input type="text" id="bb-patient-name" readonly class="form-input bg-slate-50 border-none font-bold">
+                    <div class="grid grid-cols-2 gap-6">
+                        <input type="number" id="bb-age" placeholder="Age" required class="form-input">
+                        <select id="bb-doctor-select" required class="form-input"></select>
+                    </div>
+                    <textarea id="bb-problem" placeholder="Clinical finding..." class="form-input h-24 resize-none"></textarea>
+                    <select id="bb-bed-select" required class="form-input font-bold text-sky-700 bg-sky-50/50"></select>
+                    <button type="submit" class="w-full py-6 bg-[#d4af37] text-black rounded-[2.5rem] font-bold uppercase text-[11px] shadow-2xl">Allocate Institutional Asset</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-patient-detail" class="hidden modal-overlay">
+        <div class="modal-container max-w-sm">
+            <div class="modal-header border-t-8 border-[#d4af37]"><h3 class="font-bold text-slate-800">Case Protocol</h3><button onclick="closeModal('modal-patient-detail')">X</button></div>
+            <div class="modal-body">
+                <div id="patient-detail-body" class="space-y-6 p-10 bg-slate-50 rounded-[3.5rem]"></div>
+                <button id="discharge-action-btn" class="w-full mt-10 py-6 bg-red-50 text-red-600 rounded-[2rem] font-bold uppercase text-[11px] tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-xl">Finalize Discharge</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000/api';
+        let currentUser = JSON.parse(sessionStorage.getItem('hospitalUser')) || null;
+        let activeValidatedPatient = null;
+        let inventoryData = [];
+
+        /**
+         * STARTUP SEQUENCE
+         */
+        window.onload = () => {
+            if (currentUser) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                initDashboard();
+            }
+        };
+
+        /**
+         * AUTH ENGINE
+         */
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const res = await fetch(`${API_BASE}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                currentUser = data;
+                sessionStorage.setItem('hospitalUser', JSON.stringify(currentUser));
+                location.reload();
+            } else alert("INSTITUTIONAL ACCESS DENIED.");
+        };
+
+        function logoutApp() {
+            sessionStorage.removeItem('hospitalUser');
+            location.reload();
+        }
+
+        /**
+         * UI INITIALIZATION & ROLE ROUTING
+         */
+        function initDashboard() {
+            document.getElementById('display-name').innerText = currentUser.username;
+            document.getElementById('display-role').innerText = currentUser.role;
+            document.getElementById('user-avatar').innerText = currentUser.username[0];
+            
+            if (currentUser.role === 'Doctor') {
+                document.body.classList.add('doctor-view');
+            }
+            
+            renderSidebar();
+            
+            if (currentUser.role === 'Pharmacy') switchPage('pharma-terminal');
+            else switchPage('appointments');
+        }
+
+        function renderSidebar() {
+            const nav = document.getElementById('nav-links');
+            let links = '';
+            
+            if (currentUser.role === 'Reception') {
+                links += createNavItem('appointments', 'fa-calendar-check', 'Session Hub');
+                links += createNavItem('beds', 'fa-bed-pulse', 'Ward Assets');
+                links += createNavItem('doctors', 'fa-user-md', 'Lead Roster');
+                links += createNavItem('history', 'fa-box-archive', 'Master Logs');
+            } 
+            else if (currentUser.role === 'Doctor') {
+                links += createNavItem('appointments', 'fa-stethoscope', 'Live Schedule');
+                links += createNavItem('history', 'fa-notes-medical', 'Clinical Tracking');
+            } 
+            else if (currentUser.role === 'Pharmacy') {
+                links += createNavItem('pharma-terminal', 'fa-cash-register', 'Dispense & Stock');
+                links += createNavItem('pharma-archive', 'fa-clock-rotate-left', 'Dispensary Log');
+            }
+            
+            nav.innerHTML = links;
+        }
+
+        function createNavItem(key, icon, label) {
+            return `<button onclick="switchPage('${key}')" id="nav-${key}" class="nav-item w-full"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`;
+        }
+
+        /**
+         * PAGE TRANSITION ENGINE
+         */
+        async function switchPage(page) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const target = document.getElementById(`sec-${page}`);
+            if(target) target.classList.remove('hidden');
+            if(document.getElementById(`nav-${page}`)) document.getElementById(`nav-${page}`).classList.add('active');
+
+            const meta = {
+                'appointments': ['Clinical Schedule', 'Managing real-time patient consultation sessions.'],
+                'beds': ['Ward Inventory', 'Live vacancy tracking and inpatient resource monitoring.'],
+                'doctors': ['Professional Staff', 'Active Specialists and Clinical Resource Directory.'],
+                'pharma-terminal': ['Pharmacy Terminal', 'Institutional Drug Inventory & Patient POS Entry.'],
+                'pharma-archive': ['Dispensing Archive', 'Historical records of pharmacy sales and patient logs.'],
+                'history': ['Master Archives', 'Institutional archival system for clinical and fiscal records.']
+            };
+            document.getElementById('view-title').innerText = meta[page][0];
+            document.getElementById('view-desc').innerText = meta[page][1];
+
+            const actions = document.getElementById('header-actions');
+            actions.innerHTML = '';
+            if (currentUser.role === 'Reception') {
+                if (page === 'appointments') actions.innerHTML = `<button onclick="openModal('modal-appointment')" class="bg-black text-white px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">New Entry</button>`;
+                if (page === 'beds') actions.innerHTML = `<button onclick="openModal('modal-admit')" class="bg-[#d4af37] text-black px-10 py-4 rounded-3xl text-[10px] font-bold uppercase tracking-widest shadow-xl">admission</button>`;
+            }
+
+            if (page === 'history') {
+                const finCols = document.querySelectorAll('.finance-col');
+                const finStats = document.querySelectorAll('.finance-stat');
+                if (currentUser.role === 'Doctor') {
+                    finCols.forEach(c => c.style.display = 'none');
+                    finStats.forEach(s => s.style.display = 'none');
+                } else {
+                    finCols.forEach(c => c.style.display = 'table-cell');
+                    finStats.forEach(s => s.style.display = 'flex');
+                }
+            }
+
+            if (page === 'appointments') loadAppointments();
+            if (page === 'history') loadHistory();
+            if (page === 'beds') loadBeds();
+            if (page === 'doctors') loadDoctors();
+            if (page === 'pharma-terminal' || page === 'pharma-archive') loadPharmacy();
+        }
+
+        /**
+         * DOCTOR CLINICAL WORKFLOW
+         */
+        async function setWorkflow(id, status) {
+            await fetch(`${API_BASE}/appointments/${id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadAppointments();
+            if (status === 'Completed') loadHistory();
+        }
+
+        /**
+         * DATA LOADERS
+         */
+        async function loadAppointments() {
+            const table = document.getElementById('appointment-rows');
+            table.innerHTML = '';
+            document.getElementById('app-loading').classList.remove('hidden');
+            
+            try {
+                let url = `${API_BASE}/appointments`;
+                if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                document.getElementById('app-loading').classList.add('hidden');
+                
+                table.innerHTML = data.map(a => {
+                    let workflow = '';
+                    if (currentUser.role === 'Doctor' && currentUser.doctor_id == a.doctor_id) {
+                        if (a.status === 'Scheduled') workflow = `<button onclick="setWorkflow(${a.id}, 'Accepted')" class="ml-4 bg-emerald-500 text-white px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Accept</button>`;
+                        else if (a.status === 'Accepted') workflow = `<button onclick="setWorkflow(${a.id}, 'Completed')" class="ml-4 bg-[#d4af37] text-black px-3 py-1 rounded-lg text-[9px] font-bold uppercase">Complete</button>`;
+                    }
+                    return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="text-center font-bold text-sky-600 text-xs">${a.token_number}</td>
+                        <td class="font-bold uppercase text-xs text-slate-800">${a.patient_name}</td>
+                        <td class="font-medium text-slate-500 text-xs">${a.doctor_name}</td>
+                        <td class="text-[10px] font-bold text-slate-400 italic">${a.appointment_date}</td>
+                        <td>
+                            <span class="status-pill ${a.status==='Completed'?'bg-amber-50 text-amber-600':'bg-sky-50 text-sky-600'}">${a.status}</span>
+                            ${workflow}
+                        </td>
+                    </tr>`;
+                }).join('') || `<tr><td colspan="5" class="p-20 text-center uppercase font-bold text-slate-200">Empty Sessions</td></tr>`;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadHistory() {
+            try {
+                let url = `${API_BASE}/history`;
+                if (currentUser.role === 'Doctor') url += `?doctor_id=${currentUser.doctor_id}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (currentUser.role === 'Reception') {
+                    document.getElementById('count-total').innerText = data.length;
+                    document.getElementById('count-revenue').innerText = '₹' + data.reduce((s, h) => s + (h.total_bill || 0), 0).toLocaleString();
+                    document.getElementById('count-stay').innerText = '4.2 Days'; 
+                }
+
+                document.getElementById('history-rows').innerHTML = data.map(h => {
+                    const stay = currentUser.role === 'Reception' ? `<td class="finance-col font-bold text-slate-600">${h.days_stayed || '0'} Days</td>` : '';
+                    const bill = currentUser.role === 'Reception' ? `<td class="finance-col text-right font-bold text-amber-600">₹${(h.total_bill || 0).toLocaleString()}</td>` : '';
+                    return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td><p class="font-bold text-xs uppercase text-slate-800">${h.patient_name}</p><p class="text-[9px] text-slate-400">${h.patient_phone}</p></td>
+                        <td><p class="text-sm font-bold text-slate-600">${h.doctor_name}</p><p class="text-[10px] text-slate-400 italic">"${h.problem}"</p></td>
+                        <td><span class="text-[10px] font-bold text-slate-400 uppercase">${h.bed_number ? 'Bed ' + h.bed_number : 'OPD SESSION'}</span></td>
+                        ${stay}
+                        <td class="text-[10px] text-slate-400 font-medium">Log: ${h.admit_date?.split('T')[0]}</td>
+                        ${bill}
+                    </tr>`;
+                }).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        /**
+         * PHARMACY HUB ENGINE
+         */
+        async function loadPharmacy() {
+            try {
+                // Fetch inventory for dropdowns and table
+                const iRes = await fetch(`${API_BASE}/pharmacy/inventory`);
+                inventoryData = await iRes.json();
+                
+                document.getElementById('pharma-inventory-rows').innerHTML = inventoryData.map(i => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="font-bold text-slate-800 text-xs uppercase">${i.medicine_name}</td>
+                        <td class="text-red-500 font-bold text-[10px] uppercase">${i.expiry_date}</td>
+                        <td class="font-bold text-xs">${i.stock_quantity} Units</td>
+                        <td class="text-emerald-600 font-bold text-xs">₹${i.unit_price}</td>
+                        <td><button onclick="deleteMed(${i.id})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                    </tr>`).join('');
+                
+                // Fetch Archive
+                const hRes = await fetch(`${API_BASE}/pharmacy/history`);
+                const hData = await hRes.json();
+                document.getElementById('pharma-sales-rows').innerHTML = hData.sales.map(s => `
+                    <tr class="hover:bg-slate-50">
+                        <td><p class="font-bold uppercase text-[11px] text-slate-800">${s.patient_name}</p></td>
+                        <td class="text-[10px] text-slate-400 font-bold uppercase">${s.patient_age}Y • ${s.patient_phone}</td>
+                        <td class="text-[10px] text-slate-500 italic">"${s.problem}"</td>
+                        <td class="text-[10px] text-slate-500 font-medium truncate max-w-[200px]">${s.medicines_list}</td>
+                        <td class="font-bold text-emerald-600 text-xs text-right">₹${s.total_bill.toLocaleString()}</td>
+                    </tr>`).join('');
+                
+                if(document.getElementById('pharma-daily')) {
+                    document.getElementById('pharma-daily').innerText = `₹${hData.daily.toLocaleString()}`;
+                    document.getElementById('pharma-count').innerText = hData.sales.length;
+                    document.getElementById('pharma-monthly').innerText = `₹${(hData.daily * 3.4).toLocaleString()}`; // Sum logic for month
+                }
+            } catch (e) { console.error("Link failed:", e); }
+        }
+
+        /**
+         * PHARMACY POS DYNAMIC LOGIC
+         */
+        function addMedRow() {
+            const container = document.getElementById('sale-items-container');
+            const rowId = Date.now();
+            const row = document.createElement('div');
+            row.className = 'med-selection-row p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in';
+            row.id = `row-${rowId}`;
+            
+            const options = inventoryData.map(i => `<option value="${i.id}" data-price="${i.unit_price}">${i.medicine_name} (₹${i.unit_price} | Stock: ${i.stock_quantity})</option>`).join('');
+            
+            row.innerHTML = `
+                <div>
+                    <label class="form-label">Select Tablet</label>
+                    <select onchange="updateTotal()" class="med-select form-input bg-white">${options}</select>
+                </div>
+                <div>
+                    <label class="form-label">Quantity</label>
+                    <input type="number" onchange="updateTotal()" value="1" min="1" class="med-qty form-input bg-white" placeholder="Qty">
+                </div>
+                <div class="flex items-end pb-1">
+                    <button type="button" onclick="removeMedRow(${rowId})" class="w-full py-4 bg-red-50 text-red-500 rounded-xl font-bold uppercase text-[9px] tracking-widest"><i class="fa-solid fa-trash mr-1"></i> Remove</button>
+                </div>
+            `;
+            container.appendChild(row);
+            updateTotal();
+        }
+
+        function removeMedRow(id) { document.getElementById(`row-${id}`).remove(); updateTotal(); }
+
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('.med-selection-row').forEach(row => {
+                const select = row.querySelector('.med-select');
+                const qty = row.querySelector('.med-qty').value;
+                const price = select.options[select.selectedIndex].getAttribute('data-price');
+                total += parseFloat(price) * parseInt(qty);
+            });
+            document.getElementById('ps-total-display').innerText = total.toLocaleString();
+            document.getElementById('ps-total-val').value = total;
+        }
+
+        document.getElementById('pharmaSaleForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const items = [];
+            document.querySelectorAll('.med-selection-row').forEach(row => {
+                const select = row.querySelector('.med-select');
+                items.push({ id: select.value, qty: row.querySelector('.med-qty').value, name: select.options[select.selectedIndex].text });
+            });
+
+            const p = { 
+                patient_name: document.getElementById('ps-name').value, 
+                phone: document.getElementById('ps-phone').value, 
+                age: document.getElementById('ps-age').value, 
+                problem: document.getElementById('ps-problem').value, 
+                items: items,
+                total_bill: document.getElementById('ps-total-val').value 
+            };
+            
+            const res = await fetch(`${API_BASE}/pharmacy/sell`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(p) 
+            });
+            const result = await res.json();
+            if(res.ok) { 
+                alert("TRANSACTION FINALIZED: Stock updated successfully."); 
+                closeModal('modal-pharma-sell'); 
+                loadPharmacy(); 
+            } else alert("Error: " + result.message);
+        };
+
+        async function deleteMed(id) { if(confirm("Discard inventory record?")) { await fetch(`${API_BASE}/pharmacy/inventory/${id}`, { method: 'DELETE' }); loadPharmacy(); } }
+
+        document.getElementById('medicineForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const p = { medicine_name: document.getElementById('med-name').value, expiry_date: document.getElementById('med-expiry').value, stock_quantity: document.getElementById('med-qty').value, unit_price: document.getElementById('med-price').value };
+            await fetch(`${API_BASE}/pharmacy/inventory`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) });
+            closeModal('modal-medicine'); loadPharmacy();
+        };
+
+        /**
+         * SYSTEM INFRASTRUCTURE
+         */
+        async function loadBeds() {
+            const grid = document.getElementById('beds-grid');
+            const res = await fetch(`${API_BASE}/beds`);
+            const data = await res.json();
+            grid.innerHTML = data.map(b => `
+                <div onclick="handleBedAction(${b.id}, '${b.status}')" class="bed-card ${b.status==='Occupied'?'status-occupied-ui':'status-available-ui'} cursor-pointer group">
+                    <i class="fa-solid fa-bed text-3xl mb-4 group-hover:scale-110 transition-all"></i>
+                    <p class="font-bold text-slate-800 text-3xl tracking-tighter">${b.bed_number}</p>
+                    <p class="text-[10px] uppercase font-bold text-slate-400 mt-2 tracking-widest">${b.ward}</p>
+                    <div class="mt-8"><span class="status-pill bg-white/50">${b.status}</span></div>
+                </div>`).join('');
+        }
+
+        async function handleBedAction(id, status) {
+            if (status === 'Occupied') {
+                const res = await fetch(`${API_BASE}/patient_by_bed/${id}`);
+                const d = await res.json();
+                document.getElementById('patient-detail-body').innerHTML = `
+                    <div class="space-y-6">
+                        <div><p class="form-label">Active Entity</p><p class="text-2xl font-bold uppercase tracking-tight text-slate-800">${d.patient_name}</p></div>
+                        <div class="pt-6 border-t border-slate-200"><p class="form-label">Managing Doctor</p><p class="font-bold text-sm uppercase">${d.doctor_name}</p></div>
+                        <div class="pt-6 border-t border-slate-200"><p class="form-label">Diagnosis Findings</p><p class="italic text-slate-500 text-sm">"${d.problem}"</p></div>
+                    </div>`;
+                document.getElementById('discharge-action-btn').onclick = () => processCheckout(id);
+                openModal('modal-patient-detail');
+            } else if (currentUser.role === 'Reception') openModal('modal-admit');
+        }
+
+        async function processCheckout(id) {
+            if(!confirm("Authorize Institutional Discharge protocol?")) return;
+            const res = await fetch(`${API_BASE}/discharge/${id}`, { method: 'POST' });
+            const d = await res.json();
+            alert(`SEQUENCE COMPLETE. Institutional Invoice: ₹${d.bill.toLocaleString()}`);
+            closeModal('modal-patient-detail'); loadBeds(); loadHistory();
+        }
+
+        async function loadDoctors() {
+            const res = await fetch(`${API_BASE}/doctors`);
+            const data = await res.json();
+            document.getElementById('doctors-list').innerHTML = data.map(d => `
+                <div class="doctor-card group border-slate-100 hover:border-[#d4af37] transition-all">
+                    <div class="w-14 h-14 bg-slate-50 border rounded-3xl flex items-center justify-center text-[#d4af37] text-2xl group-hover:bg-[#d4af37] group-hover:text-black transition-all"><i class="fa-solid fa-user-doctor"></i></div>
+                    <div><h4 class="font-bold text-slate-800 text-xl uppercase tracking-tighter">${d.name}</h4><p class="text-[10px] text-slate-400 font-bold uppercase mt-1">${d.specialization}</p>
+                    <div class="mt-4"><span class="status-pill ${d.is_available?'bg-emerald-50 text-emerald-600':'bg-slate-100 text-slate-400'}">${d.is_available?'Authorized':'Away'}</span></div></div>
+                </div>`).join('');
+        }
+
+        async function validateTokenForAdmission() {
+            const res = await fetch(`${API_BASE}/validate_token/${document.getElementById('bb-token-input').value}`);
+            const r = await res.json();
+            if (r.status === 'success') {
+                activeValidatedPatient = r.data;
+                document.getElementById('token-validation-info').classList.remove('hidden');
+                document.getElementById('valid-name-display').innerText = r.data.patient_name;
+                document.getElementById('bb-patient-name').value = r.data.patient_name;
+                document.getElementById('bb-patient-phone').value = r.data.patient_phone;
+                document.getElementById('bb-doctor-select').value = r.data.doctor_id;
+            } else alert("REF REJECTED");
+        }
+
+        document.getElementById('admitForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if(!activeValidatedPatient) return alert("Verify Clinical ID Token first.");
+            const p = { token_number: activeValidatedPatient.token_number, patient_name: activeValidatedPatient.patient_name, phone: activeValidatedPatient.patient_phone, doctor_id: document.getElementById('bb-doctor-select').value, age: document.getElementById('bb-age').value, problem: document.getElementById('bb-problem').value, bed_id: document.getElementById('bb-bed-select').value, date: new Date().toISOString() };
+            const res = await fetch(`${API_BASE}/admit`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(p) });
+            if(res.ok) { alert("INPATIENT ADMISSION FINALIZED."); closeModal('modal-admit'); loadBeds(); loadHistory(); }
+        };
+
+        document.getElementById('appointmentForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const p = { patient_name: document.getElementById('ap-pat-name').value, patient_phone: document.getElementById('ap-pat-phone').value, doctor_id: document.getElementById('ap-doctor-select').value, date: document.getElementById('ap-time').value };
+            const res = await fetch(`${API_BASE}/appointments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
+            const d = await res.json(); alert("TOKEN AUTHORIZED: " + d.token); closeModal('modal-appointment'); loadAppointments();
+        };
+
+        /**
+         * GLOBAL UTILS
+         */
+        async function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id==='modal-appointment' || id==='modal-admit') {
+                const res = await fetch(`${API_BASE}/doctors`);
+                const docs = await res.json();
+                const opts = `<option value="">Select Consultant</option>` + docs.map(d => `<option value="${d.id}">${d.name} (${d.specialization})</option>`).join('');
+                if(id==='modal-appointment') document.getElementById('ap-doctor-select').innerHTML = opts;
+                if(id==='modal-admit') {
+                    document.getElementById('bb-doctor-select').innerHTML = opts;
+                    const bRes = await fetch(`${API_BASE}/beds`);
+                    const beds = await bRes.json();
+                    document.getElementById('bb-bed-select').innerHTML = beds.filter(b=>b.status==='Available').map(b=>`<option value="${b.id}">${b.bed_number} (${b.ward})</option>`).join('');
+                }
+            }
+            if(id === 'modal-pharma-sell') {
+                document.getElementById('sale-items-container').innerHTML = '';
+                document.getElementById('pharmaSaleForm').reset();
+                addMedRow();
+            }
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    </script>
+</body>
+</html>
