@@ -226,28 +226,36 @@ def home():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"status": "error", "message": "No data received"}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"status": "error", "message": "Missing credentials"}), 400
+
     conn = get_db()
     user = conn.execute('''
         SELECT u.*, d.id as doctor_id 
         FROM users u 
         LEFT JOIN doctors d ON u.id = d.user_id 
         WHERE u.username = ? AND u.password = ?
-    ''', (data['username'], data['password'])).fetchone()
-    
+    ''', (username, password)).fetchone()
+
     if user:
-        conn.execute('UPDATE users SET last_login = ? WHERE id = ?', (datetime.now().isoformat(), user['id']))
-        conn.commit()
         conn.close()
-        log_system_event(user['username'], "AUTH", "Successful authentication.")
         return jsonify({
-            "status": "success", 
-            "role": user['role'], 
+            "status": "success",
+            "role": user['role'],
             "username": user['username'],
             "doctor_id": user['doctor_id']
         })
+
     conn.close()
-    return jsonify({"status": "error", "message": "Access Denied: Invalid Security Token"}), 401
+    return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
 # --- DOCTOR & CLINICAL MANAGEMENT ---
 
@@ -262,7 +270,7 @@ def get_doctors():
 def appointments():
     conn = get_db()
     if request.method == 'POST':
-        data = request.json
+        data = request.get_json()
         token = generate_unique_token()
         conn.execute('''
             INSERT INTO appointments (token_number, patient_name, patient_phone, doctor_id, appointment_date, status) 
@@ -286,7 +294,7 @@ def appointments():
 
 @app.route('/api/appointments/<int:apt_id>/status', methods=['POST'])
 def update_appointment_status(apt_id):
-    data = request.json
+    data = request.get_json()
     new_status = data.get('status')
     conn = get_db()
     conn.execute('UPDATE appointments SET status = ? WHERE id = ?', (new_status, apt_id))
@@ -333,7 +341,7 @@ def get_patient_by_bed(bed_id):
 
 @app.route('/api/admit', methods=['POST'])
 def admit_patient():
-    data = request.json
+    data = request.get_json()
     conn = get_db()
     try:
         existing = conn.execute('SELECT id FROM admissions WHERE token_number = ? AND discharge_date IS NULL', (data['token_number'],)).fetchone()
@@ -420,7 +428,7 @@ def get_history():
 def pharmacy_inventory():
     conn = get_db()
     if request.method == 'POST':
-        data = request.json
+        data = request.get_json()
         if data.get('id'):
             conn.execute('''
                 UPDATE pharmacy_inventory SET medicine_name=?, expiry_date=?, stock_quantity=?, unit_price=? WHERE id=?
@@ -448,7 +456,7 @@ def delete_medicine(med_id):
 
 @app.route('/api/pharmacy/sell', methods=['POST'])
 def sell_medicine():
-    data = request.json 
+    data = request.get_json()
     conn = get_db()
     now = datetime.now().isoformat()
     try:

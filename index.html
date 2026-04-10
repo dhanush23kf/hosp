@@ -673,7 +673,13 @@
                         password: document.getElementById('password').value
                     })
                 });
-                const data = await res.json();
+             let data;
+try {
+    data = await res.json();
+} catch {
+    alert("Server error");
+    return;
+}
                 if (data.status === 'success') {
                     currentUser = data;
                     sessionStorage.setItem('hospitalUser', JSON.stringify(currentUser));
